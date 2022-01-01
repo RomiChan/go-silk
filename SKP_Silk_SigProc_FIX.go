@@ -46,6 +46,7 @@ func SKP_ADD_POS_SAT32(a int32, b int32) int32 {
 	}
 	return a + b
 }
+
 func SKP_LIMIT_32(a int32, limit1 int32, limit2 int32) int32 {
 	if limit1 > limit2 {
 		if a > limit1 {
@@ -64,54 +65,64 @@ func SKP_LIMIT_32(a int32, limit1 int32, limit2 int32) int32 {
 	}
 	return a
 }
+
 func SKP_LSHIFT_SAT32(a int32, shift int32) int32 {
 	return SKP_LIMIT_32(a, math.MinInt32>>shift, SKP_int32_MAX>>shift) << shift
 }
+
 func SKP_RSHIFT_ROUND(a int32, shift int32) int32 {
 	if shift == 1 {
 		return (a >> 1) + (a & 1)
 	}
 	return ((a >> (shift - 1)) + 1) >> 1
 }
+
 func SKP_RSHIFT_ROUND64(a int64, shift int32) int32 {
 	if shift == 1 {
 		return int32((a >> 1) + (a & 1))
 	}
 	return int32(((a >> int64(shift-1)) + 1) >> 1)
 }
+
 func SKP_FIX_CONST(C float64, Q int32) int32 {
 	return int32(C*float64(1<<Q) + 0.5)
 }
+
 func SKP_min_int(a int32, b int32) int32 {
 	if a < b {
 		return a
 	}
 	return b
 }
+
 func SKP_min_32(a int32, b int32) int32 {
 	if a < b {
 		return a
 	}
 	return b
 }
-func SKP_max_int(a int32, b int32) int32 {
+
+func SKP_max_int(a int, b int) int {
 	if a > b {
 		return a
 	}
 	return b
 }
+
 func SKP_max_16(a int16, b int16) int16 {
 	if a > b {
 		return a
 	}
 	return b
 }
+
 func SKP_max_32(a int32, b int32) int32 {
 	if a > b {
 		return a
 	}
 	return b
 }
+
 func SKP_LIMIT_int(a int32, limit1 int32, limit2 int32) int32 {
 	if limit1 > limit2 {
 		if a > limit1 {

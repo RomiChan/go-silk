@@ -30,7 +30,7 @@ func SKP_Silk_resampler_init(S *SKP_Silk_resampler_state_struct, Fs_Hz_in int32,
 		S.Down_pre_function = SKP_Silk_resampler_down2
 	} else {
 		S.NPreDownsamplers = 0
-		S.Down_pre_function = 0
+		S.Down_pre_function = nil
 	}
 	if Fs_Hz_out > 96000 {
 		S.NPostUpsamplers = 2
@@ -40,7 +40,7 @@ func SKP_Silk_resampler_init(S *SKP_Silk_resampler_state_struct, Fs_Hz_in int32,
 		S.Up_post_function = SKP_Silk_resampler_up2
 	} else {
 		S.NPostUpsamplers = 0
-		S.Up_post_function = 0
+		S.Up_post_function = nil
 	}
 	if S.NPreDownsamplers+S.NPostUpsamplers > 0 {
 		S.Ratio_Q16 = ((Fs_Hz_out << 13) / Fs_Hz_in) << 3

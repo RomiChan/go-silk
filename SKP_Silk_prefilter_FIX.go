@@ -2,7 +2,7 @@ package silk
 
 import "unsafe"
 
-func SKP_Silk_warped_LPC_analysis_filter_FIX(state []int32, res []int16, coef_Q13 []int16, input []int16, lambda_Q16 int16, length int, order int) {
+func SKP_Silk_warped_LPC_analysis_filter_FIX(state []int32, res []int16, coef_Q13 []int16, input []int16, lambda_Q16 int16, length int32, order int32) {
 	var (
 		acc_Q11 int32
 		tmp1    int32

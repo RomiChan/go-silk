@@ -2,8 +2,9 @@ package silk
 
 import "unsafe"
 
-func SKP_Silk_resampler_up2(S [6]int32, out []int16, in []int16, len_ int) {
+func SKP_Silk_resampler_up2(S *int32, out *int16, in *int16, len_ int32) {
 	var (
+		k     int32
 		in32  int32
 		out32 int32
 		Y     int32
