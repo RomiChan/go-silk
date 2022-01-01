@@ -41,7 +41,7 @@ func SKP_Silk_SDK_InitEncoder(encState unsafe.Pointer, encStatus *SKP_SILK_SDK_E
 	}
 	return ret
 }
-func SKP_Silk_SDK_Encode(encState unsafe.Pointer, encControl *SKP_SILK_SDK_EncControlStruct, samplesIn *int16, nSamplesIn int32, outData *uint8, nBytesOut *int16) int32 {
+func SKP_Silk_SDK_Encode(encState unsafe.Pointer, encControl *SKP_SILK_SDK_EncControlStruct, samplesIn []int16, nSamplesIn int32, outData *uint8, nBytesOut []int16) int32 {
 	var (
 		max_internal_fs_kHz int32
 		PacketSize_ms       int32

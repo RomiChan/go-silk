@@ -66,8 +66,8 @@ func SKP_RSHIFT_ROUND64(a int64, shift int32) int32 {
 func SKP_FIX_CONST(C float64, Q int32) int32 {
 	return int32(C*float64(1<<int64(Q)) + 0.5)
 }
-func SKP_min_int(a int32, b int32) int32 {
-	if int64(a) < int64(b) {
+func SKP_min_int(a int, b int) int {
+	if a < b {
 		return a
 	}
 	return b
@@ -78,8 +78,8 @@ func SKP_min_32(a int32, b int32) int32 {
 	}
 	return b
 }
-func SKP_max_int(a int32, b int32) int32 {
-	if int64(a) > int64(b) {
+func SKP_max_int(a int, b int) int {
+	if a > b {
 		return a
 	}
 	return b

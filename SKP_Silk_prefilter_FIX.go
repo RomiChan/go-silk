@@ -2,26 +2,24 @@ package silk
 
 import "unsafe"
 
-func SKP_Silk_warped_LPC_analysis_filter_FIX(state []int32, res []int16, coef_Q13 []int16, input []int16, lambda_Q16 int16, length int32, order int32) {
+func SKP_Silk_warped_LPC_analysis_filter_FIX(state []int32, res []int16, coef_Q13 []int16, input []int16, lambda_Q16 int16, length int, order int) {
 	var (
-		n       int32
-		i       int32
 		acc_Q11 int32
 		tmp1    int32
 		tmp2    int32
 	)
-	for n = 0; int64(n) < int64(length); n++ {
+	for n := 0; n < length; n++ {
 		tmp2 = SKP_SMLAWB(state[0], state[1], int32(lambda_Q16))
-		state[0] = int32(int64(input[n]) << 14)
+		state[0] = int32(input[n] << 14)
 		tmp1 = SKP_SMLAWB(state[1], int32(int64(state[2])-int64(tmp2)), int32(lambda_Q16))
 		state[1] = tmp2
 		acc_Q11 = SKP_SMULWB(tmp2, int32(coef_Q13[0]))
-		for i = 2; int64(i) < int64(order); i += 2 {
+		for i := 2; i < order; i += 2 {
 			tmp2 = SKP_SMLAWB(state[i], int32(int64(state[int64(i)+1])-int64(tmp1)), int32(lambda_Q16))
 			state[i] = tmp1
 			acc_Q11 = SKP_SMLAWB(acc_Q11, tmp1, int32(coef_Q13[int64(i)-1]))
-			tmp1 = SKP_SMLAWB(state[int64(i)+1], int32(int64(state[int64(i)+2])-int64(tmp2)), int32(lambda_Q16))
-			state[int64(i)+1] = tmp2
+			tmp1 = SKP_SMLAWB(state[i+1], state[i+2]-tmp2, int32(lambda_Q16))
+			state[i+1] = tmp2
 			acc_Q11 = SKP_SMLAWB(acc_Q11, tmp2, int32(coef_Q13[i]))
 		}
 		state[order] = tmp1

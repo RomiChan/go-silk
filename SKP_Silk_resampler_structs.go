@@ -1,7 +1,5 @@
 package silk
 
-import "unsafe"
-
 const (
 	RESAMPLER_SUPPORT_ABOVE_48KHZ    = 1
 	SKP_Silk_RESAMPLER_MAX_FIR_ORDER = 16
@@ -12,8 +10,8 @@ type _SKP_Silk_resampler_state_struct struct {
 	SIIR               [6]int32
 	SFIR               [16]int32
 	SDown2             [2]int32
-	Resampler_function func(unsafe.Pointer, *int16, *int16, int32)
-	Up2_function       func(*int32, *int16, *int16, int32)
+	Resampler_function func(*SKP_Silk_resampler_state_struct, []int16, []int16, int)
+	Up2_function       func([6]int32, []int16, []int16, int)
 	BatchSize          int32
 	InvRatio_Q16       int32
 	FIR_Fracs          int32

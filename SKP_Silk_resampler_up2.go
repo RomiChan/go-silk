@@ -2,15 +2,14 @@ package silk
 
 import "unsafe"
 
-func SKP_Silk_resampler_up2(S *int32, out *int16, in *int16, len_ int32) {
+func SKP_Silk_resampler_up2(S [6]int32, out []int16, in []int16, len_ int) {
 	var (
-		k     int32
 		in32  int32
 		out32 int32
 		Y     int32
 		X     int32
 	)
-	for k = 0; int64(k) < int64(len_); k++ {
+	for k := 0; k < len_; k++ {
 		in32 = int32(int64(int32(*(*int16)(unsafe.Add(unsafe.Pointer(in), unsafe.Sizeof(int16(0))*uintptr(k))))) << 10)
 		Y = int32(int64(in32) - int64(*(*int32)(unsafe.Add(unsafe.Pointer(S), unsafe.Sizeof(int32(0))*0))))
 		X = SKP_SMULWB(Y, int32(SKP_Silk_resampler_up2_lq_0))

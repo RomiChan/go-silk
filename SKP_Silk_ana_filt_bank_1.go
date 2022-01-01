@@ -10,7 +10,9 @@ var (
 func ana_filt_bank_1(in []int16, S []int32, outL []int16, outH []int16) {
 	N2 := len(in) >> 1
 	for k := 0; k < N2; k++ {
-		in32 := int32(in[int64(k)*2] << 10)
+		/* Convert to Q10 */
+		in32 := int32(in[k*2] << 10)
+
 		Y := int32(int64(in32) - int64(S[0]))
 		X := SKP_SMLAWB(Y, Y, int32(A_fb1_21[0]))
 		out_1 := int32(int64(S[0]) + int64(X))

@@ -62,9 +62,9 @@ func SKP_Silk_resampler_private_down_FIR_INTERPOL1(out *int16, buf2 *int32, FIR_
 	}
 	return out
 }
-func SKP_Silk_resampler_private_down_FIR(SS unsafe.Pointer, out []int16, in []int16, inLen int32) {
+func SKP_Silk_resampler_private_down_FIR(SS *SKP_Silk_resampler_state_struct, out []int16, in []int16, inLen int) {
 	var (
-		S                   *SKP_Silk_resampler_state_struct = (*SKP_Silk_resampler_state_struct)(SS)
+		S                   *SKP_Silk_resampler_state_struct = SS
 		nSamplesIn          int32
 		max_index_Q16       int32
 		index_increment_Q16 int32
