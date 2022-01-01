@@ -8,13 +8,13 @@ func SKP_Silk_warped_LPC_analysis_filter_FIX(state []int32, res []int16, coef_Q1
 		tmp1    int32
 		tmp2    int32
 	)
-	for n := 0; n < length; n++ {
+	for n := int32(0); n < length; n++ {
 		tmp2 = SKP_SMLAWB(state[0], state[1], int32(lambda_Q16))
 		state[0] = int32(input[n] << 14)
 		tmp1 = SKP_SMLAWB(state[1], int32(int64(state[2])-int64(tmp2)), int32(lambda_Q16))
 		state[1] = tmp2
 		acc_Q11 = SKP_SMULWB(tmp2, int32(coef_Q13[0]))
-		for i := 2; i < order; i += 2 {
+		for i := int32(2); i < order; i += 2 {
 			tmp2 = SKP_SMLAWB(state[i], state[i+1]-tmp1, int32(lambda_Q16))
 			state[i] = tmp1
 			acc_Q11 = SKP_SMLAWB(acc_Q11, tmp1, int32(coef_Q13[i-1]))
@@ -64,7 +64,7 @@ func SKP_Silk_prefilter_FIX(psEnc *SKP_Silk_encoder_state_FIX, psEncCtrl *SKP_Si
 		tmp_32 = SKP_SMLABB(tmp_32, psEncCtrl.Coding_quality_Q14, SKP_FIX_CONST(HIGH_RATE_INPUT_TILT, 12))
 		tmp_32 = SKP_SMULWB(tmp_32, -psEncCtrl.GainsPre_Q14[k])
 		tmp_32 = SKP_RSHIFT_ROUND(tmp_32, 12)
-		B_Q12[1] = SKP_SAT16(int16(tmp_32))
+		B_Q12[1] = SKP_SAT16(tmp_32)
 		x_filt_Q12[0] = SKP_SMLABB(SKP_SMULBB(int32(st_res[0]), int32(B_Q12[0])), P.SHarmHP, int32(B_Q12[1]))
 		for j = 1; j < psEnc.SCmn.Subfr_length; j++ {
 			x_filt_Q12[j] = SKP_SMLABB(SKP_SMULBB(int32(st_res[j]), int32(B_Q12[0])), int32(st_res[j-1]), int32(B_Q12[1]))

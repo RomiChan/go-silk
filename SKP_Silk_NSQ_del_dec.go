@@ -54,7 +54,7 @@ func SKP_Silk_NSQ_del_dec(psEncC *SKP_Silk_encoder_state, psEncCtrlC *SKP_Silk_e
 	)
 	subfr_length = psEncC.Frame_length / NB_SUBFR
 	lag = NSQ.LagPrev
-	memset(unsafe.Pointer(&psDelDec[0]), 0, size_t(uintptr(psEncC.NStatesDelayedDecision)*unsafe.Sizeof(NSQ_del_dec_struct{})))
+	memset(unsafe.Pointer(&psDelDec[0]), 0, uintptr(psEncC.NStatesDelayedDecision)*unsafe.Sizeof(NSQ_del_dec_struct{}))
 	for k = 0; k < psEncC.NStatesDelayedDecision; k++ {
 		psDD = &psDelDec[k]
 		psDD.Seed = (k + psEncCtrlC.Seed) & 3

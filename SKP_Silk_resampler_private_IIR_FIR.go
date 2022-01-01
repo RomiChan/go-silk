@@ -9,18 +9,18 @@ func SKP_Silk_resampler_private_IIR_FIR_INTERPOL(out *int16, buf *int16, max_ind
 	var (
 		index_Q16   int32
 		res_Q15     int32
-		buf_ptr     *int16
+		buf_ptr     []int16
 		table_index int32
 	)
 	for index_Q16 = 0; index_Q16 < max_index_Q16; index_Q16 += index_increment_Q16 {
 		table_index = SKP_SMULWB(index_Q16&math.MaxUint16, 144)
-		buf_ptr = (*int16)(unsafe.Add(unsafe.Pointer(buf), unsafe.Sizeof(int16(0))*uintptr(index_Q16>>16)))
-		res_Q15 = SKP_SMULBB(int32(*(*int16)(unsafe.Add(unsafe.Pointer(buf_ptr), unsafe.Sizeof(int16(0))*0))), int32(SKP_Silk_resampler_frac_FIR_144[table_index][0]))
-		res_Q15 = SKP_SMLABB(res_Q15, int32(*(*int16)(unsafe.Add(unsafe.Pointer(buf_ptr), unsafe.Sizeof(int16(0))*1))), int32(SKP_Silk_resampler_frac_FIR_144[table_index][1]))
-		res_Q15 = SKP_SMLABB(res_Q15, int32(*(*int16)(unsafe.Add(unsafe.Pointer(buf_ptr), unsafe.Sizeof(int16(0))*2))), int32(SKP_Silk_resampler_frac_FIR_144[table_index][2]))
-		res_Q15 = SKP_SMLABB(res_Q15, int32(*(*int16)(unsafe.Add(unsafe.Pointer(buf_ptr), unsafe.Sizeof(int16(0))*3))), int32(SKP_Silk_resampler_frac_FIR_144[143-table_index][2]))
-		res_Q15 = SKP_SMLABB(res_Q15, int32(*(*int16)(unsafe.Add(unsafe.Pointer(buf_ptr), unsafe.Sizeof(int16(0))*4))), int32(SKP_Silk_resampler_frac_FIR_144[143-table_index][1]))
-		res_Q15 = SKP_SMLABB(res_Q15, int32(*(*int16)(unsafe.Add(unsafe.Pointer(buf_ptr), unsafe.Sizeof(int16(0))*5))), int32(SKP_Silk_resampler_frac_FIR_144[143-table_index][0]))
+		buf_ptr = ([]int16)((*int16)(unsafe.Add(unsafe.Pointer(buf), unsafe.Sizeof(int16(0))*uintptr(index_Q16>>16))))
+		res_Q15 = SKP_SMULBB(int32(buf_ptr[0]), int32(SKP_Silk_resampler_frac_FIR_144[table_index][0]))
+		res_Q15 = SKP_SMLABB(res_Q15, int32(buf_ptr[1]), int32(SKP_Silk_resampler_frac_FIR_144[table_index][1]))
+		res_Q15 = SKP_SMLABB(res_Q15, int32(buf_ptr[2]), int32(SKP_Silk_resampler_frac_FIR_144[table_index][2]))
+		res_Q15 = SKP_SMLABB(res_Q15, int32(buf_ptr[3]), int32(SKP_Silk_resampler_frac_FIR_144[143-table_index][2]))
+		res_Q15 = SKP_SMLABB(res_Q15, int32(buf_ptr[4]), int32(SKP_Silk_resampler_frac_FIR_144[143-table_index][1]))
+		res_Q15 = SKP_SMLABB(res_Q15, int32(buf_ptr[5]), int32(SKP_Silk_resampler_frac_FIR_144[143-table_index][0]))
 		*func() *int16 {
 			p := &out
 			x := *p
@@ -30,9 +30,9 @@ func SKP_Silk_resampler_private_IIR_FIR_INTERPOL(out *int16, buf *int16, max_ind
 	}
 	return out
 }
-func SKP_Silk_resampler_private_IIR_FIR(SS *SKP_Silk_resampler_state_struct, out []int16, in []int16, inLen int) {
+func SKP_Silk_resampler_private_IIR_FIR(SS unsafe.Pointer, out []int16, in []int16, inLen int32) {
 	var (
-		S                   *SKP_Silk_resampler_state_struct = SS
+		S                   *SKP_Silk_resampler_state_struct = (*SKP_Silk_resampler_state_struct)(SS)
 		nSamplesIn          int32
 		max_index_Q16       int32
 		index_increment_Q16 int32
