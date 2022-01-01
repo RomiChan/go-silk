@@ -1,6 +1,9 @@
 package silk
 
-import "unsafe"
+import (
+	"math"
+	"unsafe"
+)
 
 type inv_D_t struct {
 	Q36_part int32

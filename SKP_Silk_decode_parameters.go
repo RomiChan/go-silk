@@ -15,8 +15,8 @@ func SKP_Silk_decode_parameters(psDec *SKP_Silk_decoder_state, psDecCtrl *SKP_Si
 		pNLSF_Q15    [16]int32
 		pNLSF0_Q15   [16]int32
 		cbk_ptr_Q14  *int16
-		psNLSF_CB    *SKP_Silk_NLSF_CB_struct    = 0
-		psRC         *SKP_Silk_range_coder_state = &psDec.SRC
+		psNLSF_CB    *SKP_Silk_NLSF_CB_struct
+		psRC         = &psDec.SRC
 	)
 	if psDec.NFramesDecoded == 0 {
 		SKP_Silk_range_decoder(&Ix, psRC, SKP_Silk_SamplingRates_CDF[:], SKP_Silk_SamplingRates_offset)
@@ -46,7 +46,7 @@ func SKP_Silk_decode_parameters(psDec *SKP_Silk_decoder_state, psDecCtrl *SKP_Si
 	SKP_Silk_gains_dequant(psDecCtrl.Gains_Q16, GainsIndices, &psDec.LastGainIndex, psDec.NFramesDecoded)
 	psNLSF_CB = psDec.PsNLSF_CB[psDecCtrl.Sigtype]
 	SKP_Silk_range_decoder_multi(NLSFIndices[:], psRC, ([]*uint16)(psNLSF_CB.StartPtr), ([]int32)(psNLSF_CB.MiddleIx), psNLSF_CB.NStages)
-	SKP_Silk_NLSF_MSVQ_decode(&pNLSF_Q15[0], psNLSF_CB, &NLSFIndices[0], psDec.LPC_order)
+	SKP_Silk_NLSF_MSVQ_decode(pNLSF_Q15[:], psNLSF_CB, NLSFIndices[:], psDec.LPC_order)
 	SKP_Silk_range_decoder(&psDecCtrl.NLSFInterpCoef_Q2, psRC, SKP_Silk_NLSF_interpolation_factor_CDF[:], SKP_Silk_NLSF_interpolation_factor_offset)
 	if psDec.First_frame_after_reset == 1 {
 		psDecCtrl.NLSFInterpCoef_Q2 = 4
@@ -59,13 +59,13 @@ func SKP_Silk_decode_parameters(psDec *SKP_Silk_decoder_state, psDecCtrl *SKP_Si
 			}
 			SKP_Silk_NLSF2A_stable(psDecCtrl.PredCoef_Q12[0], pNLSF0_Q15, psDec.LPC_order)
 		} else {
-			memcpy(unsafe.Pointer(&(psDecCtrl.PredCoef_Q12[0])[0]), unsafe.Pointer(&(psDecCtrl.PredCoef_Q12[1])[0]), size_t(uintptr(psDec.LPC_order)*unsafe.Sizeof(int16(0))))
+			memcpy(unsafe.Pointer(&(psDecCtrl.PredCoef_Q12[0])[0]), unsafe.Pointer(&(psDecCtrl.PredCoef_Q12[1])[0]), uintptr(psDec.LPC_order)*unsafe.Sizeof(int16(0)))
 		}
 	}
-	memcpy(unsafe.Pointer(&psDec.PrevNLSF_Q15[0]), unsafe.Pointer(&pNLSF_Q15[0]), size_t(uintptr(psDec.LPC_order)*unsafe.Sizeof(int32(0))))
+	memcpy(unsafe.Pointer(&psDec.PrevNLSF_Q15[0]), unsafe.Pointer(&pNLSF_Q15[0]), uintptr(psDec.LPC_order)*unsafe.Sizeof(int32(0)))
 	if psDec.LossCnt != 0 {
-		SKP_Silk_bwexpander(&psDecCtrl.PredCoef_Q12[0][0], psDec.LPC_order, BWE_AFTER_LOSS_Q16)
-		SKP_Silk_bwexpander(&psDecCtrl.PredCoef_Q12[1][0], psDec.LPC_order, BWE_AFTER_LOSS_Q16)
+		SKP_Silk_bwexpander(psDecCtrl.PredCoef_Q12[0][:], psDec.LPC_order, BWE_AFTER_LOSS_Q16)
+		SKP_Silk_bwexpander(psDecCtrl.PredCoef_Q12[1][:], psDec.LPC_order, BWE_AFTER_LOSS_Q16)
 	}
 	if psDecCtrl.Sigtype == SIG_TYPE_VOICED {
 		if psDec.Fs_kHz == 8 {
@@ -94,8 +94,8 @@ func SKP_Silk_decode_parameters(psDec *SKP_Silk_decoder_state, psDecCtrl *SKP_Si
 		SKP_Silk_range_decoder(&Ix, psRC, SKP_Silk_LTPscale_CDF[:], SKP_Silk_LTPscale_offset)
 		psDecCtrl.LTP_scale_Q14 = int32(SKP_Silk_LTPScales_table_Q14[Ix])
 	} else {
-		memset(unsafe.Pointer(&psDecCtrl.PitchL[0]), 0, size_t(NB_SUBFR*unsafe.Sizeof(int32(0))))
-		memset(unsafe.Pointer(&psDecCtrl.LTPCoef_Q14[0]), 0, size_t(LTP_ORDER*NB_SUBFR*unsafe.Sizeof(int16(0))))
+		memset(unsafe.Pointer(&psDecCtrl.PitchL[0]), 0, NB_SUBFR*unsafe.Sizeof(int32(0)))
+		memset(unsafe.Pointer(&psDecCtrl.LTPCoef_Q14[0]), 0, LTP_ORDER*NB_SUBFR*unsafe.Sizeof(int16(0)))
 		psDecCtrl.PERIndex = 0
 		psDecCtrl.LTP_scale_Q14 = 0
 	}

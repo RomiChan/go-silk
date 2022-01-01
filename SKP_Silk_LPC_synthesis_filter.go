@@ -1,11 +1,13 @@
 package silk
 
+import "math"
+
 func SKP_Silk_LPC_synthesis_filter(in []int16, A_Q12 []int16, Gain_Q26 int32, S []int32, out []int16, len_ int32, Order int32) {
 	var (
 		k          int32
 		j          int32
 		idx        int32
-		Order_half int32 = (Order >> 1)
+		Order_half = Order >> 1
 		SA         int32
 		SB         int32
 		out32_Q10  int32

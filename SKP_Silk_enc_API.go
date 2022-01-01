@@ -41,7 +41,7 @@ func SKP_Silk_SDK_InitEncoder(encState unsafe.Pointer, encStatus *SKP_SILK_SDK_E
 	}
 	return ret
 }
-func SKP_Silk_SDK_Encode(encState unsafe.Pointer, encControl *SKP_SILK_SDK_EncControlStruct, samplesIn []int16, nSamplesIn int32, outData *uint8, nBytesOut []int16) int32 {
+func SKP_Silk_SDK_Encode(encState unsafe.Pointer, encControl *SKP_SILK_SDK_EncControlStruct, samplesIn []int16, nSamplesIn int32, outData []uint8, nBytesOut *int16) int32 {
 	var (
 		max_internal_fs_kHz int32
 		PacketSize_ms       int32
@@ -56,7 +56,7 @@ func SKP_Silk_SDK_Encode(encState unsafe.Pointer, encControl *SKP_SILK_SDK_EncCo
 		TargetRate_bps      int32
 		API_fs_Hz           int32
 		MaxBytesOut         int16
-		psEnc               *SKP_Silk_encoder_state_FIX = (*SKP_Silk_encoder_state_FIX)(encState)
+		psEnc               = (*SKP_Silk_encoder_state_FIX)(encState)
 	)
 	if encControl.API_sampleRate != 8000 && encControl.API_sampleRate != 12000 && encControl.API_sampleRate != 16000 && encControl.API_sampleRate != 24000 && encControl.API_sampleRate != 32000 && encControl.API_sampleRate != 44100 && encControl.API_sampleRate != 48000 || encControl.MaxInternalSampleRate != 8000 && encControl.MaxInternalSampleRate != 12000 && encControl.MaxInternalSampleRate != 16000 && encControl.MaxInternalSampleRate != 24000 {
 		ret = -2
@@ -109,7 +109,7 @@ func SKP_Silk_SDK_Encode(encState unsafe.Pointer, encControl *SKP_SILK_SDK_EncCo
 		}
 		return max_internal_fs_kHz * 1000
 	}()) == 24000 && psEnc.SCmn.SSWBdetect.SWB_detected == 0 && psEnc.SCmn.SSWBdetect.WB_detected == 0 {
-		SKP_Silk_detect_SWB_input(&psEnc.SCmn.SSWBdetect, ([]int16)(samplesIn), nSamplesIn)
+		SKP_Silk_detect_SWB_input(&psEnc.SCmn.SSWBdetect, samplesIn, nSamplesIn)
 	}
 	MaxBytesOut = 0
 	for {
@@ -117,7 +117,7 @@ func SKP_Silk_SDK_Encode(encState unsafe.Pointer, encControl *SKP_SILK_SDK_EncCo
 		if API_fs_Hz == SKP_SMULBB(1000, psEnc.SCmn.Fs_kHz) {
 			nSamplesToBuffer = SKP_min_int(nSamplesToBuffer, nSamplesIn)
 			nSamplesFromInput = nSamplesToBuffer
-			memcpy(unsafe.Pointer(&psEnc.SCmn.InputBuf[psEnc.SCmn.InputBufIx]), unsafe.Pointer(samplesIn), size_t(uintptr(nSamplesFromInput)*unsafe.Sizeof(int16(0))))
+			memcpy(unsafe.Pointer(&psEnc.SCmn.InputBuf[psEnc.SCmn.InputBufIx]), unsafe.Pointer(&samplesIn[0]), size_t(uintptr(nSamplesFromInput)*unsafe.Sizeof(int16(0))))
 		} else {
 			if nSamplesToBuffer < (input_10ms * 10 * psEnc.SCmn.Fs_kHz) {
 				nSamplesToBuffer = nSamplesToBuffer
@@ -125,19 +125,19 @@ func SKP_Silk_SDK_Encode(encState unsafe.Pointer, encControl *SKP_SILK_SDK_EncCo
 				nSamplesToBuffer = input_10ms * 10 * psEnc.SCmn.Fs_kHz
 			}
 			nSamplesFromInput = (nSamplesToBuffer * API_fs_Hz) / (psEnc.SCmn.Fs_kHz * 1000)
-			ret += SKP_Silk_resampler(&psEnc.SCmn.Resampler_state, ([]int16)(&psEnc.SCmn.InputBuf[psEnc.SCmn.InputBufIx]), ([]int16)(samplesIn), nSamplesFromInput)
+			ret += SKP_Silk_resampler(&psEnc.SCmn.Resampler_state, ([]int16)(&psEnc.SCmn.InputBuf[psEnc.SCmn.InputBufIx]), samplesIn, nSamplesFromInput)
 		}
-		samplesIn = (*int16)(unsafe.Add(unsafe.Pointer(samplesIn), unsafe.Sizeof(int16(0))*uintptr(nSamplesFromInput)))
+		samplesIn += ([]int16)(nSamplesFromInput)
 		nSamplesIn -= nSamplesFromInput
 		psEnc.SCmn.InputBufIx += nSamplesToBuffer
 		if psEnc.SCmn.InputBufIx >= psEnc.SCmn.Frame_length {
 			if MaxBytesOut == 0 {
 				MaxBytesOut = *nBytesOut
-				ret = SKP_Silk_encode_frame_FIX(psEnc, outData, &MaxBytesOut, &psEnc.SCmn.InputBuf[0])
+				ret = SKP_Silk_encode_frame_FIX(psEnc, &outData[0], &MaxBytesOut, &psEnc.SCmn.InputBuf[0])
 				if ret != 0 {
 				}
 			} else {
-				ret = SKP_Silk_encode_frame_FIX(psEnc, outData, nBytesOut, &psEnc.SCmn.InputBuf[0])
+				ret = SKP_Silk_encode_frame_FIX(psEnc, &outData[0], nBytesOut, &psEnc.SCmn.InputBuf[0])
 				if ret != 0 {
 				}
 			}

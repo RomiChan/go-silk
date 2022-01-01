@@ -45,8 +45,8 @@ func SKP_Silk_find_LPC_FIX(NLSF_Q15 []int32, interpIndex *int32, prev_NLSFq_Q15 
 			SKP_Silk_NLSF2A_stable(a_tmp_Q12, NLSF0_Q15, LPC_order)
 			memset(unsafe.Pointer(&S[0]), 0, size_t(uintptr(LPC_order)*unsafe.Sizeof(int16(0))))
 			SKP_Silk_LPC_analysis_filter(&x[0], &a_tmp_Q12[0], &S[0], &LPC_res[0], subfr_length*2, LPC_order)
-			SKP_Silk_sum_sqr_shift(&res_nrg0, &rshift0, &LPC_res[LPC_order], subfr_length-LPC_order)
-			SKP_Silk_sum_sqr_shift(&res_nrg1, &rshift1, &LPC_res[LPC_order+subfr_length], subfr_length-LPC_order)
+			SKP_Silk_sum_sqr_shift(&res_nrg0, &rshift0, ([]int16)(&LPC_res[LPC_order]), subfr_length-LPC_order)
+			SKP_Silk_sum_sqr_shift(&res_nrg1, &rshift1, ([]int16)(&LPC_res[LPC_order+subfr_length]), subfr_length-LPC_order)
 			shift = rshift0 - rshift1
 			if shift >= 0 {
 				res_nrg1 = res_nrg1 >> shift

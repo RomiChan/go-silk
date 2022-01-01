@@ -4,7 +4,7 @@ import "unsafe"
 
 func SKP_Silk_find_pitch_lags_FIX(psEnc *SKP_Silk_encoder_state_FIX, psEncCtrl *SKP_Silk_encoder_control_FIX, res []int16, x []int16) {
 	var (
-		psPredSt   *SKP_Silk_predict_state_FIX = &psEnc.SPred
+		psPredSt   = &psEnc.SPred
 		buf_len    int32
 		i          int32
 		scale      int32
@@ -22,12 +22,12 @@ func SKP_Silk_find_pitch_lags_FIX(psEnc *SKP_Silk_encoder_state_FIX, psEncCtrl *
 	)
 	buf_len = psEnc.SCmn.La_pitch + (psEnc.SCmn.Frame_length << 1)
 	x_buf = (*int16)(unsafe.Add(unsafe.Pointer(&x[0]), -int(unsafe.Sizeof(int16(0))*uintptr(psEnc.SCmn.Frame_length))))
-	x_buf_ptr = (*int16)(unsafe.Add(unsafe.Pointer((*int16)(unsafe.Add(unsafe.Pointer(x_buf), unsafe.Sizeof(int16(0))*uintptr(buf_len)))), -int(unsafe.Sizeof(int16(0))*uintptr(psPredSt.Pitch_LPC_win_length))))
+	x_buf_ptr = (*int16)(unsafe.Add(unsafe.Add(unsafe.Pointer(x_buf), unsafe.Sizeof(int16(0))*uintptr(buf_len)), -int(unsafe.Sizeof(int16(0))*uintptr(psPredSt.Pitch_LPC_win_length))))
 	Wsig_ptr = &Wsig[0]
 	SKP_Silk_apply_sine_window(([]int16)(Wsig_ptr), ([]int16)(x_buf_ptr), 1, psEnc.SCmn.La_pitch)
 	Wsig_ptr = (*int16)(unsafe.Add(unsafe.Pointer(Wsig_ptr), unsafe.Sizeof(int16(0))*uintptr(psEnc.SCmn.La_pitch)))
 	x_buf_ptr = (*int16)(unsafe.Add(unsafe.Pointer(x_buf_ptr), unsafe.Sizeof(int16(0))*uintptr(psEnc.SCmn.La_pitch)))
-	memcpy(unsafe.Pointer(Wsig_ptr), unsafe.Pointer(x_buf_ptr), size_t(uintptr(psPredSt.Pitch_LPC_win_length-(psEnc.SCmn.La_pitch<<1))*unsafe.Sizeof(int16(0))))
+	memcpy(unsafe.Pointer(Wsig_ptr), unsafe.Pointer(x_buf_ptr), uintptr(psPredSt.Pitch_LPC_win_length-(psEnc.SCmn.La_pitch<<1))*unsafe.Sizeof(int16(0)))
 	Wsig_ptr = (*int16)(unsafe.Add(unsafe.Pointer(Wsig_ptr), unsafe.Sizeof(int16(0))*uintptr(psPredSt.Pitch_LPC_win_length-(psEnc.SCmn.La_pitch<<1))))
 	x_buf_ptr = (*int16)(unsafe.Add(unsafe.Pointer(x_buf_ptr), unsafe.Sizeof(int16(0))*uintptr(psPredSt.Pitch_LPC_win_length-(psEnc.SCmn.La_pitch<<1))))
 	SKP_Silk_apply_sine_window(([]int16)(Wsig_ptr), ([]int16)(x_buf_ptr), 2, psEnc.SCmn.La_pitch)
@@ -40,9 +40,9 @@ func SKP_Silk_find_pitch_lags_FIX(psEnc *SKP_Silk_encoder_state_FIX, psEncCtrl *
 		A_Q12[i] = SKP_SAT16((A_Q24[i]) >> 12)
 	}
 	SKP_Silk_bwexpander(&A_Q12[0], psEnc.SCmn.PitchEstimationLPCOrder, SKP_FIX_CONST(0.99, 16))
-	memset(unsafe.Pointer(&FiltState[0]), 0, size_t(uintptr(psEnc.SCmn.PitchEstimationLPCOrder)*unsafe.Sizeof(int32(0))))
+	memset(unsafe.Pointer(&FiltState[0]), 0, uintptr(psEnc.SCmn.PitchEstimationLPCOrder)*unsafe.Sizeof(int32(0)))
 	SKP_Silk_MA_Prediction(x_buf, &A_Q12[0], &FiltState[0], &res[0], buf_len, psEnc.SCmn.PitchEstimationLPCOrder)
-	memset(unsafe.Pointer(&res[0]), 0, size_t(uintptr(psEnc.SCmn.PitchEstimationLPCOrder)*unsafe.Sizeof(int16(0))))
+	memset(unsafe.Pointer(&res[0]), 0, uintptr(psEnc.SCmn.PitchEstimationLPCOrder)*unsafe.Sizeof(int16(0)))
 	thrhld_Q15 = SKP_FIX_CONST(0.45, 15)
 	thrhld_Q15 = SKP_SMLABB(thrhld_Q15, SKP_FIX_CONST(-0.004, 15), psEnc.SCmn.PitchEstimationLPCOrder)
 	thrhld_Q15 = SKP_SMLABB(thrhld_Q15, SKP_FIX_CONST(-0.1, 7), psEnc.Speech_activity_Q8)

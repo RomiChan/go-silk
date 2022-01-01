@@ -1,6 +1,9 @@
 package silk
 
-import "unsafe"
+import (
+	"math"
+	"unsafe"
+)
 
 const LTP_CORRS_HEAD_ROOM = 2
 
