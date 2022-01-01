@@ -4,13 +4,13 @@ import "unsafe"
 
 func combine_pulses(out []int32, in []int32, len_ int32) {
 	var k int32
-	for k = 0; int64(k) < int64(len_); k++ {
-		out[k] = int32(int64(in[int64(k)*2]) + int64(in[int64(k)*2+1]))
+	for k = 0; k < len_; k++ {
+		out[k] = in[k*2] + in[k*2+1]
 	}
 }
 func encode_split(sRC *SKP_Silk_range_coder_state, p_child1 int32, p int32, shell_table []uint16) {
 	var cdf *uint16
-	if int64(p) > 0 {
+	if p > 0 {
 		cdf = &shell_table[SKP_Silk_shell_code_table_offsets[p]]
 		SKP_Silk_range_encoder(sRC, p_child1, ([]uint16)(cdf))
 	}
@@ -20,11 +20,11 @@ func decode_split(p_child1 *int32, p_child2 *int32, sRC *SKP_Silk_range_coder_st
 		cdf_middle int32
 		cdf        *uint16
 	)
-	if int64(p) > 0 {
+	if p > 0 {
 		cdf_middle = p >> 1
 		cdf = (*uint16)(unsafe.Add(unsafe.Pointer(shell_table), unsafe.Sizeof(uint16(0))*uintptr(SKP_Silk_shell_code_table_offsets[p])))
 		SKP_Silk_range_decoder(p_child1, sRC, ([]uint16)(cdf), cdf_middle)
-		*(*int32)(unsafe.Add(unsafe.Pointer(p_child2), unsafe.Sizeof(int32(0))*0)) = int32(int64(p) - int64(*(*int32)(unsafe.Add(unsafe.Pointer(p_child1), unsafe.Sizeof(int32(0))*0))))
+		*(*int32)(unsafe.Add(unsafe.Pointer(p_child2), unsafe.Sizeof(int32(0))*0)) = p - *(*int32)(unsafe.Add(unsafe.Pointer(p_child1), unsafe.Sizeof(int32(0))*0))
 	} else {
 		*(*int32)(unsafe.Add(unsafe.Pointer(p_child1), unsafe.Sizeof(int32(0))*0)) = 0
 		*(*int32)(unsafe.Add(unsafe.Pointer(p_child2), unsafe.Sizeof(int32(0))*0)) = 0

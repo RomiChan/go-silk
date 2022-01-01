@@ -156,7 +156,7 @@ func SKP_Silk_A2NLSF(NLSF []int, a_Q16 []int32, d int) {
 			} else {
 				xlo = int32(SKP_Silk_LSFCosTab_FIX_Q12[k-1]) // Q12
 			}
-			ylo = int32((1 - (root_ix & 2)) << 12)
+			ylo = (1 - (root_ix & 2)) << 12
 		} else {
 			/* Increment loop counter */
 			k++
@@ -179,7 +179,7 @@ func SKP_Silk_A2NLSF(NLSF []int, a_Q16 []int32, d int) {
 				p = &P
 				xlo = SKP_Silk_LSFCosTab_FIX_Q12[0]
 				ylo = SKP_Silk_A2NLSF_eval_poly(*p, xlo, dd)
-				if int64(ylo) < 0 {
+				if ylo < 0 {
 					/* Set the first NLSF to zero and move on to the next */
 					NLSF[0] = 0
 					p = &Q

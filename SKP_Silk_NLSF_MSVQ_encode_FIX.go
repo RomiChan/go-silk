@@ -31,30 +31,30 @@ func SKP_Silk_NLSF_MSVQ_encode_FIX(NLSFIndices *int32, pNLSF_Q15 *int32, psNLSF_
 		pCurrentCBStage       *SKP_Silk_NLSF_CBS
 	)
 	memset(unsafe.Pointer(&pRate_Q5[0]), 0, size_t(uintptr(NLSF_MSVQ_Survivors)*unsafe.Sizeof(int32(0))))
-	for i = 0; int64(i) < int64(LPC_order); i++ {
+	for i = 0; i < LPC_order; i++ {
 		pRes_Q15[i] = *(*int32)(unsafe.Add(unsafe.Pointer(pNLSF_Q15), unsafe.Sizeof(int32(0))*uintptr(i)))
 	}
 	prev_survivors = 1
-	min_survivors = int32(int64(NLSF_MSVQ_Survivors) / 2)
-	for s = 0; int64(s) < int64(psNLSF_CB.NStages); s++ {
+	min_survivors = NLSF_MSVQ_Survivors / 2
+	for s = 0; s < psNLSF_CB.NStages; s++ {
 		pCurrentCBStage = (*SKP_Silk_NLSF_CBS)(unsafe.Add(unsafe.Pointer(psNLSF_CB.CBStages), unsafe.Sizeof(SKP_Silk_NLSF_CBS{})*uintptr(s)))
 		cur_survivors = SKP_min_32(NLSF_MSVQ_Survivors, SKP_SMULBB(prev_survivors, pCurrentCBStage.NVectors))
 		SKP_Silk_NLSF_VQ_rate_distortion_FIX(&pRateDist_Q18[0], pCurrentCBStage, &pRes_Q15[0], pW_Q6, &pRate_Q5[0], NLSF_mu_Q15, prev_survivors, LPC_order)
-		SKP_Silk_insertion_sort_increasing(&pRateDist_Q18[0], &pTempIndices[0], int32(int64(prev_survivors)*int64(pCurrentCBStage.NVectors)), cur_survivors)
-		if int64(pRateDist_Q18[0]) < SKP_int32_MAX/MAX_NLSF_MSVQ_SURVIVORS {
-			rateDistThreshold_Q18 = SKP_SMLAWB(pRateDist_Q18[0], int32(int64(NLSF_MSVQ_Survivors)*int64(pRateDist_Q18[0])), SKP_FIX_CONST(0.1, 16))
-			for int64(pRateDist_Q18[int64(cur_survivors)-1]) > int64(rateDistThreshold_Q18) && int64(cur_survivors) > int64(min_survivors) {
+		SKP_Silk_insertion_sort_increasing(&pRateDist_Q18[0], &pTempIndices[0], prev_survivors*pCurrentCBStage.NVectors, cur_survivors)
+		if pRateDist_Q18[0] < SKP_int32_MAX/MAX_NLSF_MSVQ_SURVIVORS {
+			rateDistThreshold_Q18 = SKP_SMLAWB(pRateDist_Q18[0], NLSF_MSVQ_Survivors*(pRateDist_Q18[0]), SKP_FIX_CONST(0.1, 16))
+			for pRateDist_Q18[cur_survivors-1] > rateDistThreshold_Q18 && cur_survivors > min_survivors {
 				cur_survivors--
 			}
 		}
-		for k = 0; int64(k) < int64(cur_survivors); k++ {
-			if int64(s) > 0 {
-				if int64(pCurrentCBStage.NVectors) == 8 {
+		for k = 0; k < cur_survivors; k++ {
+			if s > 0 {
+				if pCurrentCBStage.NVectors == 8 {
 					input_index = (pTempIndices[k]) >> 3
-					cb_index = int32(int64(pTempIndices[k]) & 7)
+					cb_index = pTempIndices[k] & 7
 				} else {
-					input_index = int32(int64(pTempIndices[k]) / int64(pCurrentCBStage.NVectors))
-					cb_index = int32(int64(pTempIndices[k]) - int64(SKP_SMULBB(input_index, pCurrentCBStage.NVectors)))
+					input_index = (pTempIndices[k]) / pCurrentCBStage.NVectors
+					cb_index = pTempIndices[k] - SKP_SMULBB(input_index, pCurrentCBStage.NVectors)
 				}
 			} else {
 				input_index = 0
@@ -63,18 +63,18 @@ func SKP_Silk_NLSF_MSVQ_encode_FIX(NLSFIndices *int32, pNLSF_Q15 *int32, psNLSF_
 			pConstInt = &pRes_Q15[SKP_SMULBB(input_index, LPC_order)]
 			pCB_element = (*int16)(unsafe.Add(unsafe.Pointer(pCurrentCBStage.CB_NLSF_Q15), unsafe.Sizeof(int16(0))*uintptr(SKP_SMULBB(cb_index, LPC_order))))
 			pInt = &pRes_new_Q15[SKP_SMULBB(k, LPC_order)]
-			for i = 0; int64(i) < int64(LPC_order); i++ {
-				*(*int32)(unsafe.Add(unsafe.Pointer(pInt), unsafe.Sizeof(int32(0))*uintptr(i))) = int32(int64(*(*int32)(unsafe.Add(unsafe.Pointer(pConstInt), unsafe.Sizeof(int32(0))*uintptr(i)))) - int64(*(*int16)(unsafe.Add(unsafe.Pointer(pCB_element), unsafe.Sizeof(int16(0))*uintptr(i)))))
+			for i = 0; i < LPC_order; i++ {
+				*(*int32)(unsafe.Add(unsafe.Pointer(pInt), unsafe.Sizeof(int32(0))*uintptr(i))) = *(*int32)(unsafe.Add(unsafe.Pointer(pConstInt), unsafe.Sizeof(int32(0))*uintptr(i))) - int32(*(*int16)(unsafe.Add(unsafe.Pointer(pCB_element), unsafe.Sizeof(int16(0))*uintptr(i))))
 			}
 			pRate_new_Q5[k] = int32(int64(pRate_Q5[input_index]) + int64(*(*int16)(unsafe.Add(unsafe.Pointer(pCurrentCBStage.Rates_Q5), unsafe.Sizeof(int16(0))*uintptr(cb_index)))))
 			pConstInt = &pPath[SKP_SMULBB(input_index, psNLSF_CB.NStages)]
 			pInt = &pPath_new[SKP_SMULBB(k, psNLSF_CB.NStages)]
-			for i = 0; int64(i) < int64(s); i++ {
+			for i = 0; i < s; i++ {
 				*(*int32)(unsafe.Add(unsafe.Pointer(pInt), unsafe.Sizeof(int32(0))*uintptr(i))) = *(*int32)(unsafe.Add(unsafe.Pointer(pConstInt), unsafe.Sizeof(int32(0))*uintptr(i)))
 			}
 			*(*int32)(unsafe.Add(unsafe.Pointer(pInt), unsafe.Sizeof(int32(0))*uintptr(s))) = cb_index
 		}
-		if int64(s) < int64(psNLSF_CB.NStages)-1 {
+		if s < psNLSF_CB.NStages-1 {
 			memcpy(unsafe.Pointer(&pRes_Q15[0]), unsafe.Pointer(&pRes_new_Q15[0]), size_t(uintptr(SKP_SMULBB(cur_survivors, LPC_order))*unsafe.Sizeof(int32(0))))
 			memcpy(unsafe.Pointer(&pRate_Q5[0]), unsafe.Pointer(&pRate_new_Q5[0]), size_t(uintptr(cur_survivors)*unsafe.Sizeof(int32(0))))
 			memcpy(unsafe.Pointer(&pPath[0]), unsafe.Pointer(&pPath_new[0]), size_t(uintptr(SKP_SMULBB(cur_survivors, psNLSF_CB.NStages))*unsafe.Sizeof(int32(0))))
@@ -82,19 +82,19 @@ func SKP_Silk_NLSF_MSVQ_encode_FIX(NLSFIndices *int32, pNLSF_Q15 *int32, psNLSF_
 		prev_survivors = cur_survivors
 	}
 	bestIndex = 0
-	if int64(deactivate_fluc_red) != 1 {
+	if deactivate_fluc_red != 1 {
 		bestRateDist_Q20 = SKP_int32_MAX
-		for s = 0; int64(s) < int64(cur_survivors); s++ {
+		for s = 0; s < cur_survivors; s++ {
 			SKP_Silk_NLSF_MSVQ_decode(pNLSF_Q15, psNLSF_CB, &pPath_new[SKP_SMULBB(s, psNLSF_CB.NStages)], LPC_order)
 			wsse_Q20 = 0
-			for i = 0; int64(i) < int64(LPC_order); i += 2 {
-				se_Q15 = int32(int64(*(*int32)(unsafe.Add(unsafe.Pointer(pNLSF_Q15), unsafe.Sizeof(int32(0))*uintptr(i)))) - int64(*(*int32)(unsafe.Add(unsafe.Pointer(pNLSF_q_Q15_prev), unsafe.Sizeof(int32(0))*uintptr(i)))))
+			for i = 0; i < LPC_order; i += 2 {
+				se_Q15 = *(*int32)(unsafe.Add(unsafe.Pointer(pNLSF_Q15), unsafe.Sizeof(int32(0))*uintptr(i))) - *(*int32)(unsafe.Add(unsafe.Pointer(pNLSF_q_Q15_prev), unsafe.Sizeof(int32(0))*uintptr(i)))
 				wsse_Q20 = SKP_SMLAWB(wsse_Q20, SKP_SMULBB(se_Q15, se_Q15), *(*int32)(unsafe.Add(unsafe.Pointer(pW_Q6), unsafe.Sizeof(int32(0))*uintptr(i))))
-				se_Q15 = int32(int64(*(*int32)(unsafe.Add(unsafe.Pointer(pNLSF_Q15), unsafe.Sizeof(int32(0))*uintptr(int64(i)+1)))) - int64(*(*int32)(unsafe.Add(unsafe.Pointer(pNLSF_q_Q15_prev), unsafe.Sizeof(int32(0))*uintptr(int64(i)+1)))))
-				wsse_Q20 = SKP_SMLAWB(wsse_Q20, SKP_SMULBB(se_Q15, se_Q15), *(*int32)(unsafe.Add(unsafe.Pointer(pW_Q6), unsafe.Sizeof(int32(0))*uintptr(int64(i)+1))))
+				se_Q15 = *(*int32)(unsafe.Add(unsafe.Pointer(pNLSF_Q15), unsafe.Sizeof(int32(0))*uintptr(i+1))) - *(*int32)(unsafe.Add(unsafe.Pointer(pNLSF_q_Q15_prev), unsafe.Sizeof(int32(0))*uintptr(i+1)))
+				wsse_Q20 = SKP_SMLAWB(wsse_Q20, SKP_SMULBB(se_Q15, se_Q15), *(*int32)(unsafe.Add(unsafe.Pointer(pW_Q6), unsafe.Sizeof(int32(0))*uintptr(i+1))))
 			}
 			wsse_Q20 = SKP_ADD_POS_SAT32(pRateDist_Q18[s], SKP_SMULWB(wsse_Q20, NLSF_mu_fluc_red_Q16))
-			if int64(wsse_Q20) < int64(bestRateDist_Q20) {
+			if wsse_Q20 < bestRateDist_Q20 {
 				bestRateDist_Q20 = wsse_Q20
 				bestIndex = s
 			}

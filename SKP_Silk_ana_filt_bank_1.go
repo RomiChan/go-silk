@@ -22,7 +22,7 @@ func ana_filt_bank_1(in []int16, S []int32, outL []int16, outH []int16) {
 		X = SKP_SMULWB(Y, int32(A_fb1_20[0]))
 		out_2 := int32(int64(S[1]) + int64(X))
 		S[1] = int32(int64(in32) + int64(X))
-		outL[k] = SKP_SAT16(int16(SKP_RSHIFT_ROUND(int32(int64(out_2)+int64(out_1)), 11)))
-		outH[k] = SKP_SAT16(int16(SKP_RSHIFT_ROUND(int32(int64(out_2)-int64(out_1)), 11)))
+		outL[k] = SKP_SAT16(SKP_RSHIFT_ROUND(int32(int64(out_2)+int64(out_1)), 11))
+		outH[k] = SKP_SAT16(SKP_RSHIFT_ROUND(int32(int64(out_2)-int64(out_1)), 11))
 	}
 }

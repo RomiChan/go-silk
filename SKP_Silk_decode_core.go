@@ -118,7 +118,7 @@ func SKP_Silk_decode_core(psDec *SKP_Silk_decoder_state, psDecCtrl *SKP_Silk_dec
 		length := psDec.Subfr_length
 		SKP_Silk_decode_short_term_prediction(vec_Q10[:length], unsafe.Slice(pres_Q10, length), psDec.SLPC_Q14[:], A_Q12_tmp[:], psDec.LPC_order)
 		for i = 0; int64(i) < int64(psDec.Subfr_length); i++ {
-			*(*int16)(unsafe.Add(unsafe.Pointer(pxq), unsafe.Sizeof(int16(0))*uintptr(i))) = SKP_SAT16(int16(SKP_RSHIFT_ROUND(SKP_SMULWW(vec_Q10[i], Gain_Q16), 10)))
+			*(*int16)(unsafe.Add(unsafe.Pointer(pxq), unsafe.Sizeof(int16(0))*uintptr(i))) = SKP_SAT16(SKP_RSHIFT_ROUND(SKP_SMULWW(vec_Q10[i], Gain_Q16), 10))
 		}
 		memcpy(unsafe.Pointer(&psDec.SLPC_Q14[0]), unsafe.Pointer(&psDec.SLPC_Q14[psDec.Subfr_length]), MAX_LPC_ORDER*unsafe.Sizeof(int32(0)))
 		pexc_Q10 = (*int32)(unsafe.Add(unsafe.Pointer(pexc_Q10), unsafe.Sizeof(int32(0))*uintptr(psDec.Subfr_length)))

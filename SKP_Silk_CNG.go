@@ -11,7 +11,7 @@ func SKP_Silk_CNG_exc(residual []int16, exc_buf_Q10 []int32, Gain_Q16 int32, ran
 	for i := 0; i < len(residual); i++ {
 		seed = int32(int64(uint32(int32(int64(uint32(seed))*0xBB38435))) + 0x3619636B)
 		idx := int32((int64(seed) >> 24) & int64(exc_mask))
-		residual[i] = SKP_SAT16(int16(SKP_RSHIFT_ROUND(SKP_SMULWW(exc_buf_Q10[idx], Gain_Q16), 10)))
+		residual[i] = SKP_SAT16(SKP_RSHIFT_ROUND(SKP_SMULWW(exc_buf_Q10[idx], Gain_Q16), 10))
 	}
 	*rand_seed = seed
 }
@@ -66,7 +66,7 @@ func SKP_Silk_CNG(psDec *SKP_Silk_decoder_state, psDecCtrl *SKP_Silk_decoder_con
 		}
 		for i, v := range CNG_sig {
 			tmp_32 := int32(int64(signal[i]) + int64(v))
-			signal[i] = SKP_SAT16(int16(tmp_32))
+			signal[i] = SKP_SAT16(tmp_32)
 		}
 	} else {
 		memset(unsafe.Pointer(&psCNG.CNG_synth_state[0]), 0, uintptr(psDec.LPC_order)*unsafe.Sizeof(int32(0)))

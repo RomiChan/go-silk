@@ -7,25 +7,21 @@ import (
 
 func SKP_Silk_range_encoder(psRC *SKP_Silk_range_coder_state, data int32, prob []uint16) {
 	var (
-		low_Q16   uint32
-		high_Q16  uint32
-		base_tmp  uint32
-		range_Q32 uint32
-		base_Q32  uint32 = psRC.Base_Q32
-		range_Q16 uint32 = psRC.Range_Q16
-		bufferIx  int32  = psRC.BufferIx
-		buffer    *uint8 = &psRC.Buffer[0]
+		base_Q32  = psRC.Base_Q32
+		range_Q16 = psRC.Range_Q16
+		bufferIx  = psRC.BufferIx
+		buffer    = &psRC.Buffer[0]
 	)
 	if int64(psRC.Error) != 0 {
 		return
 	}
-	low_Q16 = uint32(prob[data])
-	high_Q16 = uint32(prob[int64(data)+1])
-	base_tmp = base_Q32
+	low_Q16 := uint32(prob[data])
+	high_Q16 := uint32(prob[int64(data)+1])
+	base_tmp := base_Q32
 	base_Q32 += uint32(int32(int64(range_Q16) * int64(low_Q16)))
-	range_Q32 = uint32(int32(int64(range_Q16) * (int64(high_Q16) - int64(low_Q16))))
+	range_Q32 := uint32(int32(int64(range_Q16) * (int64(high_Q16) - int64(low_Q16))))
 	if int64(base_Q32) < int64(base_tmp) {
-		var bufferIx_tmp int32 = bufferIx
+		var bufferIx_tmp = bufferIx
 		for int64(func() uint8 {
 			p := (*uint8)(unsafe.Add(unsafe.Pointer(buffer), func() int32 {
 				p := &bufferIx_tmp
@@ -75,33 +71,28 @@ func SKP_Silk_range_encoder(psRC *SKP_Silk_range_coder_state, data int32, prob [
 func SKP_Silk_range_encoder_multi(psRC *SKP_Silk_range_coder_state, data []int32, prob []*uint16, nSymbols int32) {
 	var k int32
 	for k = 0; int64(k) < int64(nSymbols); k++ {
-		SKP_Silk_range_encoder(psRC, data[k], ([]uint16)(prob[k]))
+		// todo: check if this is correct
+		SKP_Silk_range_encoder(psRC, data[k], unsafe.Slice(prob[k], data[k]*2+2))
 	}
 }
 func SKP_Silk_range_decoder(data *int32, psRC *SKP_Silk_range_coder_state, prob []uint16, probIx int32) {
 	var (
 		low_Q16   uint32
-		high_Q16  uint32
-		base_tmp  uint32
-		range_Q32 uint32
-		base_Q32  uint32 = psRC.Base_Q32
-		range_Q16 uint32 = psRC.Range_Q16
-		bufferIx  int32  = psRC.BufferIx
-		buffer    *uint8 = &psRC.Buffer[4]
+		base_Q32  = psRC.Base_Q32
+		range_Q16 = psRC.Range_Q16
+		bufferIx  = psRC.BufferIx
+		buffer    = &psRC.Buffer[4]
 	)
 	if int64(psRC.Error) != 0 {
 		*data = 0
 		return
 	}
-	high_Q16 = uint32(prob[probIx])
-	base_tmp = uint32(int32(int64(range_Q16) * int64(high_Q16)))
+	high_Q16 := uint32(prob[probIx])
+	base_tmp := uint32(int32(int64(range_Q16) * int64(high_Q16)))
 	if int64(base_tmp) > int64(base_Q32) {
 		for {
-			low_Q16 = uint32(prob[func() int32 {
-				p := &probIx
-				*p--
-				return *p
-			}()])
+			probIx--
+			low_Q16 = uint32(prob[probIx])
 			base_tmp = uint32(int32(int64(range_Q16) * int64(low_Q16)))
 			if int64(base_tmp) <= int64(base_Q32) {
 				break
@@ -116,11 +107,8 @@ func SKP_Silk_range_decoder(data *int32, psRC *SKP_Silk_range_coder_state, prob 
 	} else {
 		for {
 			low_Q16 = high_Q16
-			high_Q16 = uint32(prob[func() int32 {
-				p := &probIx
-				*p++
-				return *p
-			}()])
+			probIx++
+			high_Q16 = uint32(prob[probIx])
 			base_tmp = uint32(int32(int64(range_Q16) * int64(high_Q16)))
 			if int64(base_tmp) > int64(base_Q32) {
 				probIx--
@@ -135,7 +123,7 @@ func SKP_Silk_range_decoder(data *int32, psRC *SKP_Silk_range_coder_state, prob 
 	}
 	*data = probIx
 	base_Q32 -= uint32(int32(int64(range_Q16) * int64(low_Q16)))
-	range_Q32 = uint32(int32(int64(range_Q16) * (int64(high_Q16) - int64(low_Q16))))
+	range_Q32 := uint32(int32(int64(range_Q16) * (int64(high_Q16) - int64(low_Q16))))
 	if int64(range_Q32)&0xFF000000 != 0 {
 		range_Q16 = uint32(int32(int64(range_Q32) >> 16))
 	} else {
@@ -155,22 +143,14 @@ func SKP_Silk_range_decoder(data *int32, psRC *SKP_Silk_range_coder_state, prob 
 			}
 			base_Q32 = uint32(int32(int64(base_Q32) << 8))
 			if int64(bufferIx) < int64(psRC.BufferLength) {
-				base_Q32 |= uint32(*(*uint8)(unsafe.Add(unsafe.Pointer(buffer), func() int32 {
-					p := &bufferIx
-					x := *p
-					*p++
-					return x
-				}())))
+				base_Q32 |= uint32(*(*uint8)(unsafe.Add(unsafe.Pointer(buffer), bufferIx)))
+				bufferIx++
 			}
 		}
 		base_Q32 = uint32(int32(int64(base_Q32) << 8))
 		if int64(bufferIx) < int64(psRC.BufferLength) {
-			base_Q32 |= uint32(*(*uint8)(unsafe.Add(unsafe.Pointer(buffer), func() int32 {
-				p := &bufferIx
-				x := *p
-				*p++
-				return x
-			}())))
+			base_Q32 |= uint32(*(*uint8)(unsafe.Add(unsafe.Pointer(buffer), bufferIx)))
+			bufferIx++
 		}
 	}
 	if int64(range_Q16) == 0 {
@@ -185,7 +165,7 @@ func SKP_Silk_range_decoder(data *int32, psRC *SKP_Silk_range_coder_state, prob 
 func SKP_Silk_range_decoder_multi(data []int32, psRC *SKP_Silk_range_coder_state, prob []*uint16, probStartIx []int32, nSymbols int32) {
 	var k int32
 	for k = 0; int64(k) < int64(nSymbols); k++ {
-		SKP_Silk_range_decoder(&data[k], psRC, ([]uint16)(prob[k]), probStartIx[k])
+		SKP_Silk_range_decoder(&data[k], psRC, unsafe.Slice(prob[k], probStartIx[k]), probStartIx[k])
 	}
 }
 func SKP_Silk_range_enc_init(psRC *SKP_Silk_range_coder_state) {
@@ -200,10 +180,10 @@ func SKP_Silk_range_dec_init(psRC *SKP_Silk_range_coder_state, buffer []uint8, b
 		psRC.Error = -8
 		return
 	}
-	memcpy(unsafe.Pointer(&psRC.Buffer[0]), unsafe.Pointer(&buffer[0]), size_t(uintptr(bufferLength)*unsafe.Sizeof(uint8(0))))
+	memcpy(unsafe.Pointer(&psRC.Buffer[0]), unsafe.Pointer(&buffer[0]), uintptr(bufferLength)*unsafe.Sizeof(uint8(0)))
 	psRC.BufferLength = bufferLength
 	psRC.BufferIx = 0
-	psRC.Base_Q32 = uint32(int32((int64(uint32(buffer[0])) << 24) | int64(uint32(buffer[1]))<<16 | int64(uint32(buffer[2]))<<8 | int64(buffer[3])))
+	psRC.Base_Q32 = uint32(int32((int64(buffer[0]) << 24) | int64(buffer[1])<<16 | int64(buffer[2])<<8 | int64(buffer[3])))
 	psRC.Range_Q16 = math.MaxUint16
 	psRC.Error = 0
 }
@@ -229,32 +209,21 @@ func SKP_Silk_range_enc_wrap_up(psRC *SKP_Silk_range_coder_state) {
 	base_Q24 &= uint32(int32(math.MaxUint32 << (24 - int64(bits_to_store))))
 	if int64(base_Q24)&0x1000000 != 0 {
 		bufferIx_tmp = psRC.BufferIx
-		for int64(func() uint8 {
-			p := &(psRC.Buffer[func() int32 {
-				p := &bufferIx_tmp
-				*p--
-				return *p
-			}()])
-			*p++
-			return *p
-		}()) == 0 {
+		for {
+			bufferIx_tmp--
+			psRC.Buffer[bufferIx_tmp]++
+			if psRC.Buffer[bufferIx_tmp] == 0 {
+				break
+			}
 		}
 	}
 	if int64(psRC.BufferIx) < int64(psRC.BufferLength) {
-		psRC.Buffer[func() int32 {
-			p := &psRC.BufferIx
-			x := *p
-			*p++
-			return x
-		}()] = uint8(int8(int64(base_Q24) >> 16))
+		psRC.Buffer[bufferIx_tmp] = uint8(int8(int64(base_Q24) >> 16))
+		bufferIx_tmp++
 		if int64(bits_to_store) > 8 {
 			if int64(psRC.BufferIx) < int64(psRC.BufferLength) {
-				psRC.Buffer[func() int32 {
-					p := &psRC.BufferIx
-					x := *p
-					*p++
-					return x
-				}()] = uint8(int8(int64(base_Q24) >> 8))
+				psRC.Buffer[psRC.BufferIx] = uint8(int8(int64(base_Q24) >> 8))
+				psRC.BufferIx++
 			}
 		}
 	}
@@ -266,18 +235,14 @@ func SKP_Silk_range_enc_wrap_up(psRC *SKP_Silk_range_coder_state) {
 	}
 }
 func SKP_Silk_range_coder_check_after_decoding(psRC *SKP_Silk_range_coder_state) {
-	var (
-		bits_in_stream int32
-		nBytes         int32
-		mask           int32
-	)
-	bits_in_stream = SKP_Silk_range_coder_get_length(psRC, &nBytes)
+	var nBytes int32
+	bits_in_stream := SKP_Silk_range_coder_get_length(psRC, &nBytes)
 	if int64(nBytes)-1 >= int64(psRC.BufferLength) {
 		psRC.Error = -5
 		return
 	}
 	if int64(bits_in_stream)&7 != 0 {
-		mask = int32(math.MaxUint8 >> (int64(bits_in_stream) & 7))
+		mask := int32(math.MaxUint8 >> (int64(bits_in_stream) & 7))
 		if (int64(psRC.Buffer[int64(nBytes)-1]) & int64(mask)) != int64(mask) {
 			psRC.Error = -5
 			return

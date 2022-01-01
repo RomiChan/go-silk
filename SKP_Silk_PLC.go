@@ -234,7 +234,7 @@ func SKP_Silk_PLC_conceal(psDec *SKP_Silk_decoder_state, psDecCtrl *SKP_Silk_dec
 		memcpy(unsafe.Pointer(&psDec.SLPC_Q14[0]), unsafe.Pointer(&psDec.SLPC_Q14[psDec.Subfr_length]), size_t(MAX_LPC_ORDER*unsafe.Sizeof(int32(0))))
 	}
 	for i = 0; int64(i) < int64(psDec.Frame_length); i++ {
-		signal[i] = SKP_SAT16(int16(SKP_RSHIFT_ROUND(SKP_SMULWW(sig_Q10[i], psPLC.PrevGain_Q16[NB_SUBFR-1]), 10)))
+		signal[i] = SKP_SAT16(SKP_RSHIFT_ROUND(SKP_SMULWW(sig_Q10[i], psPLC.PrevGain_Q16[NB_SUBFR-1]), 10))
 	}
 	psPLC.Rand_seed = rand_seed
 	psPLC.RandScale_Q14 = rand_scale_Q14
