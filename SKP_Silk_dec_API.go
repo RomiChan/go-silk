@@ -155,11 +155,3 @@ func SKP_Silk_SDK_get_TOC(inData *uint8, nBytesIn int32, Silk_TOC *SKP_Silk_TOC_
 		}
 	}
 }
-func SKP_Silk_SDK_get_version() *byte {
-	var version [6]byte = func() [6]byte {
-		var t [6]byte
-		copy(t[:], ([]byte)("1.0.9"))
-		return t
-	}()
-	return &version[0]
-}

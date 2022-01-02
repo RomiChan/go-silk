@@ -21,6 +21,7 @@ func SKP_Silk_find_pitch_lags_FIX(psEnc *SKP_Silk_encoder_state_FIX, psEncCtrl *
 		A_Q12      [16]int16
 	)
 	buf_len = psEnc.SCmn.La_pitch + (psEnc.SCmn.Frame_length << 1)
+	SKP_assert(buf_len >= psPredSt.Pitch_LPC_win_length)
 	x_buf = (*int16)(unsafe.Add(unsafe.Pointer(&x[0]), -int(unsafe.Sizeof(int16(0))*uintptr(psEnc.SCmn.Frame_length))))
 	x_buf_ptr = (*int16)(unsafe.Add(unsafe.Pointer((*int16)(unsafe.Add(unsafe.Pointer(x_buf), unsafe.Sizeof(int16(0))*uintptr(buf_len)))), -int(unsafe.Sizeof(int16(0))*uintptr(psPredSt.Pitch_LPC_win_length))))
 	Wsig_ptr = &Wsig[0]

@@ -213,6 +213,7 @@ func SKP_Silk_PLC_conceal(psDec *SKP_Silk_decoder_state, psDecCtrl *SKP_Silk_dec
 	}
 	sig_Q10_ptr = ([]int32)(sig_Q10[:])
 	memcpy(unsafe.Pointer(&A_Q12_tmp.As_int16[0]), unsafe.Pointer(&psPLC.PrevLPC_Q12[0]), size_t(uintptr(psDec.LPC_order)*unsafe.Sizeof(int16(0))))
+	SKP_assert(psDec.LPC_order >= 10)
 	for k = 0; k < NB_SUBFR; k++ {
 		for i = 0; i < psDec.Subfr_length; i++ {
 			LPC_pred_Q10 = SKP_SMULWB(psDec.SLPC_Q14[MAX_LPC_ORDER+i-1], int32(A_Q12_tmp.As_int16[0]))

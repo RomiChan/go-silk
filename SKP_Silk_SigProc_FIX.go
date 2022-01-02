@@ -1,6 +1,8 @@
 package silk
 
-import "math"
+import (
+	"math"
+)
 
 const SKP_Silk_MAX_ORDER_LPC = 16
 const SKP_Silk_MAX_CORRELATION_LENGTH = 640
@@ -88,7 +90,7 @@ func SKP_FIX_CONST(C float64, Q int32) int32 {
 	return int32(C*float64(1<<Q) + 0.5)
 }
 
-func SKP_min_int(a int32, b int32) int32 {
+func SKP_min_int(a int, b int) int {
 	if a < b {
 		return a
 	}

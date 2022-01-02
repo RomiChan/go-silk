@@ -20,8 +20,12 @@ func LPC_inverse_pred_gain_16(invGain_Q30 *int32, A_16 [2][16]int32, order int32
 		}
 		rc_Q31 = -((Anew_16[k]) << (31 - 16))
 		rc_mult1_Q30 = (SKP_int32_MAX >> 1) - SKP_SMMUL(rc_Q31, rc_Q31)
+		SKP_assert(rc_mult1_Q30 > (1 << 15))
+		SKP_assert(rc_mult1_Q30 < (1 << 30))
 		rc_mult2_Q16 = SKP_INVERSE32_varQ(rc_mult1_Q30, 46)
 		*invGain_Q30 = SKP_SMMUL(*invGain_Q30, rc_mult1_Q30) << 2
+		SKP_assert(*invGain_Q30 >= 0)
+		SKP_assert(*invGain_Q30 <= (1 << 30))
 		Aold_16 = Anew_16
 		Anew_16 = ([]int32)(A_16[k&1][:])
 		headrm = SKP_Silk_CLZ32(rc_mult2_Q16) - 1
@@ -37,6 +41,8 @@ func LPC_inverse_pred_gain_16(invGain_Q30 *int32, A_16 [2][16]int32, order int32
 	rc_Q31 = -((Anew_16[0]) << (31 - 16))
 	rc_mult1_Q30 = (SKP_int32_MAX >> 1) - SKP_SMMUL(rc_Q31, rc_Q31)
 	*invGain_Q30 = SKP_SMMUL(*invGain_Q30, rc_mult1_Q30) << 2
+	SKP_assert(*invGain_Q30 >= 0)
+	SKP_assert(*invGain_Q30 <= 1<<30)
 	return 0
 }
 func SKP_Silk_LPC_inverse_pred_gain(invGain_Q30 *int32, A_Q12 []int16, order int32) int32 {

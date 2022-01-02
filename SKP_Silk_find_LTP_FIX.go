@@ -58,6 +58,7 @@ func SKP_Silk_find_LTP_FIX(b_Q14 [20]int16, WLTP [100]int32, LTPredCodGain_Q7 *i
 		if corr_rshifts[k] > rr_shifts {
 			rr[k] = (rr[k]) >> (corr_rshifts[k] - rr_shifts)
 		}
+		SKP_assert(rr[k] >= 0)
 		regu = 1
 		regu = SKP_SMLAWB(regu, rr[k], SKP_FIX_CONST(0.01/3, 16))
 		regu = SKP_SMLAWB(regu, WLTP_ptr[LTP_ORDER*0+0], SKP_FIX_CONST(0.01/3, 16))
@@ -73,6 +74,7 @@ func SKP_Silk_find_LTP_FIX(b_Q14 [20]int16, WLTP [100]int32, LTPredCodGain_Q7 *i
 		} else {
 			denom32 = 1
 		}
+		SKP_assert((int64(Wght_Q15[k]) << 16) < SKP_int32_MAX)
 		temp32 = ((Wght_Q15[k]) << 16) / denom32
 		temp32 = temp32 >> (corr_rshifts[k] + 31 - extra_shifts - 26)
 		WLTP_max = 0
@@ -84,11 +86,13 @@ func SKP_Silk_find_LTP_FIX(b_Q14 [20]int16, WLTP [100]int32, LTPredCodGain_Q7 *i
 			}
 		}
 		lshift = SKP_Silk_CLZ32(WLTP_max) - 1 - 3
+		SKP_assert(lshift+(26-18) >= 0)
 		if lshift+(26-18) < 31 {
 			temp32 = SKP_min_32(temp32, 1<<(lshift+(26-18)))
 		}
 		SKP_Silk_scale_vector32_Q26_lshift_18(WLTP_ptr, temp32, LTP_ORDER*LTP_ORDER)
 		w[k] = WLTP_ptr[(LTP_ORDER>>1)*LTP_ORDER+(LTP_ORDER>>1)]
+		SKP_assert(w[k] >= 0)
 		r_ptr += ([]int16)(subfr_length)
 		b_Q14_ptr = (*int16)(unsafe.Add(unsafe.Pointer(b_Q14_ptr), unsafe.Sizeof(int16(0))*uintptr(LTP_ORDER)))
 		WLTP_ptr += LTP_ORDER * LTP_ORDER
@@ -100,6 +104,7 @@ func SKP_Silk_find_LTP_FIX(b_Q14 [20]int16, WLTP [100]int32, LTPredCodGain_Q7 *i
 	if LTPredCodGain_Q7 != nil {
 		LPC_LTP_res_nrg = 0
 		LPC_res_nrg = 0
+		SKP_assert(LTP_CORRS_HEAD_ROOM >= 2)
 		for k = 0; k < NB_SUBFR; k++ {
 			LPC_res_nrg = LPC_res_nrg + ((SKP_SMULWB(rr[k], Wght_Q15[k]) + 1) >> ((maxRshifts - corr_rshifts[k]) + 1))
 			LPC_LTP_res_nrg = LPC_LTP_res_nrg + ((SKP_SMULWB(nrg[k], Wght_Q15[k]) + 1) >> ((maxRshifts - corr_rshifts[k]) + 1))
@@ -111,6 +116,7 @@ func SKP_Silk_find_LTP_FIX(b_Q14 [20]int16, WLTP [100]int32, LTPredCodGain_Q7 *i
 		}
 		div_Q16 = SKP_DIV32_varQ(LPC_res_nrg, LPC_LTP_res_nrg, 16)
 		*LTPredCodGain_Q7 = SKP_SMULBB(3, SKP_Silk_lin2log(div_Q16)-(16<<7))
+		SKP_assert(*LTPredCodGain_Q7 == int32(SKP_SAT16((SKP_Silk_lin2log(div_Q16)-(16<<7))*3)))
 	}
 	b_Q14_ptr = &b_Q14[0]
 	for k = 0; k < NB_SUBFR; k++ {
@@ -126,6 +132,7 @@ func SKP_Silk_find_LTP_FIX(b_Q14 [20]int16, WLTP [100]int32, LTPredCodGain_Q7 *i
 		max_abs_d_Q14 = SKP_max_32(max_abs_d_Q14, int32(SKP_abs(int64(d_Q14[k]))))
 		max_w_bits = SKP_max_32(max_w_bits, 32-SKP_Silk_CLZ32(w[k])+corr_rshifts[k]-maxRshifts)
 	}
+	SKP_assert(max_abs_d_Q14 <= (5 << 15))
 	extra_shifts = max_w_bits + 32 - SKP_Silk_CLZ32(max_abs_d_Q14) - 14
 	extra_shifts -= maxRshifts + (32 - 1 - 2)
 	extra_shifts = SKP_max_int(extra_shifts, 0)

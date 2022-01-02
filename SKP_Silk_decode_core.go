@@ -31,6 +31,7 @@ func SKP_Silk_decode_core(psDec *SKP_Silk_decoder_state, psDecCtrl *SKP_Silk_dec
 	var pres_Q10 []int32
 	var vec_Q10 [120]int32
 	var FiltState [16]int32
+	SKP_assert(psDec.Prev_inv_gain_Q16 != 0)
 	offset_Q10 = int32(SKP_Silk_Quantization_Offsets_Q10[psDecCtrl.Sigtype][psDecCtrl.QuantOffsetType])
 	if psDecCtrl.NLSFInterpCoef_Q2 < (1 << 2) {
 		NLSF_interpolation_flag = 1
@@ -80,6 +81,8 @@ func SKP_Silk_decode_core(psDec *SKP_Silk_decoder_state, psDecCtrl *SKP_Silk_dec
 			lag = psDecCtrl.PitchL[k]
 			if (k & (3 - (NLSF_interpolation_flag << 1))) == 0 {
 				start_idx = psDec.Frame_length - lag - psDec.LPC_order - LTP_ORDER/2
+				SKP_assert(start_idx >= 0)
+				SKP_assert(start_idx <= psDec.Frame_length-psDec.LPC_order)
 				memset(unsafe.Pointer(&FiltState[0]), 0, size_t(uintptr(psDec.LPC_order)*unsafe.Sizeof(int32(0))))
 				SKP_Silk_MA_Prediction(([]int16)(&psDec.OutBuf[start_idx+k*(psDec.Frame_length>>2)]), ([]int16)(A_Q12), FiltState[:], ([]int16)(&sLTP[start_idx]), psDec.Frame_length-start_idx, psDec.LPC_order)
 				inv_gain_Q32 = inv_gain_Q16 << 16
@@ -100,6 +103,7 @@ func SKP_Silk_decode_core(psDec *SKP_Silk_decoder_state, psDecCtrl *SKP_Silk_dec
 		for i = 0; i < MAX_LPC_ORDER; i++ {
 			psDec.SLPC_Q14[i] = SKP_SMULWW(gain_adj_Q16, psDec.SLPC_Q14[i])
 		}
+		SKP_assert(inv_gain_Q16 != 0)
 		psDec.Prev_inv_gain_Q16 = inv_gain_Q16
 		if sigtype == SIG_TYPE_VOICED {
 			pred_lag_ptr = ([]int32)(&psDec.SLTP_Q16[sLTP_buf_idx-lag+LTP_ORDER/2])

@@ -33,9 +33,12 @@ func SKP_Silk_burg_modified(res_nrg *int32, res_nrg_Q *int32, A_Q16 []int32, x [
 		CAf           [17]int32
 		CAb           [17]int32
 	)
+	SKP_assert(subfr_length*nb_subfr <= MAX_FRAME_SIZE)
+	SKP_assert(nb_subfr <= MAX_NB_SUBFR)
 	SKP_Silk_sum_sqr_shift(&C0, &rshifts, x, nb_subfr*subfr_length)
 	if rshifts > (32 - 25) {
 		C0 = C0 << (rshifts - (32 - 25))
+		SKP_assert(C0 > 0)
 		rshifts = 32 - 25
 	} else {
 		lz = SKP_Silk_CLZ32(C0) - 1
@@ -149,6 +152,7 @@ func SKP_Silk_burg_modified(res_nrg *int32, res_nrg_Q *int32, A_Q16 []int32, x [
 			rc_Q31 = SKP_DIV32_varQ(num, nrg, 31)
 		} else {
 			memset(unsafe.Pointer(&Af_25[n]), 0, size_t(uintptr(D-n)*unsafe.Sizeof(int32(0))))
+			SKP_assert(0)
 			break
 		}
 		for k = 0; k < (n+1)>>1; k++ {

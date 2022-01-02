@@ -21,6 +21,7 @@ func SKP_Silk_NSQ(psEncC *SKP_Silk_encoder_state, psEncCtrlC *SKP_Silk_encoder_c
 	)
 	NSQ.Rand_seed = psEncCtrlC.Seed
 	lag = NSQ.LagPrev
+	SKP_assert(NSQ.Prev_inv_gain_Q16 != 0)
 	offset_Q10 = int32(SKP_Silk_Quantization_Offsets_Q10[psEncCtrlC.Sigtype][psEncCtrlC.QuantOffsetType])
 	if LSFInterpFactor_Q2 == (1 << 2) {
 		LSF_interpolation_flag = 0
@@ -34,6 +35,7 @@ func SKP_Silk_NSQ(psEncC *SKP_Silk_encoder_state, psEncCtrlC *SKP_Silk_encoder_c
 		A_Q12 = &PredCoef_Q12[((k>>1)|(1-LSF_interpolation_flag))*MAX_LPC_ORDER]
 		B_Q14 = &LTPCoef_Q14[k*LTP_ORDER]
 		AR_shp_Q13 = &AR2_Q13[k*MAX_SHAPE_LPC_ORDER]
+		SKP_assert(HarmShapeGain_Q14[k] >= 0)
 		HarmShapeFIRPacked_Q14 = (HarmShapeGain_Q14[k]) >> 2
 		HarmShapeFIRPacked_Q14 |= ((HarmShapeGain_Q14[k]) >> 1) << 16
 		NSQ.Rewhite_flag = 0
@@ -41,6 +43,8 @@ func SKP_Silk_NSQ(psEncC *SKP_Silk_encoder_state, psEncCtrlC *SKP_Silk_encoder_c
 			lag = psEncCtrlC.PitchL[k]
 			if (k & (3 - (LSF_interpolation_flag << 1))) == 0 {
 				start_idx = psEncC.Frame_length - lag - psEncC.PredictLPCOrder - LTP_ORDER/2
+				SKP_assert(start_idx >= 0)
+				SKP_assert(start_idx <= psEncC.Frame_length-psEncC.PredictLPCOrder)
 				memset(unsafe.Pointer(&FiltState[0]), 0, size_t(uintptr(psEncC.PredictLPCOrder)*unsafe.Sizeof(int32(0))))
 				SKP_Silk_MA_Prediction(([]int16)(&NSQ.Xq[start_idx+k*(psEncC.Frame_length>>2)]), ([]int16)(A_Q12), FiltState[:], ([]int16)(&sLTP[start_idx]), psEncC.Frame_length-start_idx, psEncC.PredictLPCOrder)
 				NSQ.Rewhite_flag = 1
@@ -93,6 +97,9 @@ func SKP_Silk_noise_shape_quantizer(NSQ *SKP_Silk_nsq_state, sigtype int32, x_sc
 	for i = 0; i < length; i++ {
 		NSQ.Rand_seed = int32((uint32(NSQ.Rand_seed) * 0xBB38435) + 0x3619636B)
 		dither = NSQ.Rand_seed >> 31
+		SKP_assert((predictLPCOrder & 1) == 0)
+		SKP_assert((int64(uintptr(unsafe.Pointer((*int8)(unsafe.Add(unsafe.Pointer((*int8)(unsafe.Pointer(&a_Q12[0]))), 0))))) & 3) == 0)
+		SKP_assert(predictLPCOrder >= 10)
 		LPC_pred_Q10 = SKP_SMULWB(psLPC_Q14[0], int32(a_Q12[0]))
 		LPC_pred_Q10 = SKP_SMLAWB(LPC_pred_Q10, psLPC_Q14[-1], int32(a_Q12[1]))
 		LPC_pred_Q10 = SKP_SMLAWB(LPC_pred_Q10, psLPC_Q14[-2], int32(a_Q12[2]))
@@ -116,6 +123,7 @@ func SKP_Silk_noise_shape_quantizer(NSQ *SKP_Silk_nsq_state, sigtype int32, x_sc
 		} else {
 			LTP_pred_Q14 = 0
 		}
+		SKP_assert((shapingLPCOrder & 1) == 0)
 		tmp2 = psLPC_Q14[0]
 		tmp1 = NSQ.SAR2_Q14[0]
 		NSQ.SAR2_Q14[0] = tmp2
@@ -134,6 +142,7 @@ func SKP_Silk_noise_shape_quantizer(NSQ *SKP_Silk_nsq_state, sigtype int32, x_sc
 		n_AR_Q10 = SKP_SMLAWB(n_AR_Q10, NSQ.SLF_AR_shp_Q12, Tilt_Q14)
 		n_LF_Q10 = SKP_SMULWB(NSQ.SLTP_shp_Q10[NSQ.SLTP_shp_buf_idx-1], LF_shp_Q14) << 2
 		n_LF_Q10 = SKP_SMLAWT(n_LF_Q10, NSQ.SLF_AR_shp_Q12, LF_shp_Q14)
+		SKP_assert(lag > 0 || sigtype == SIG_TYPE_UNVOICED)
 		if lag > 0 {
 			n_LTP_Q14 = SKP_SMULWB((*(*int32)(unsafe.Add(unsafe.Pointer(shp_lag_ptr), unsafe.Sizeof(int32(0))*0)))+(*(*int32)(unsafe.Add(unsafe.Pointer(shp_lag_ptr), -int(unsafe.Sizeof(int32(0))*2)))), HarmShapeFIRPacked_Q14)
 			n_LTP_Q14 = SKP_SMLAWT(n_LTP_Q14, *(*int32)(unsafe.Add(unsafe.Pointer(shp_lag_ptr), -int(unsafe.Sizeof(int32(0))*1))), HarmShapeFIRPacked_Q14)
@@ -211,6 +220,7 @@ func SKP_Silk_nsq_scale_states(NSQ *SKP_Silk_nsq_state, x []int16, x_sc_Q10 []in
 			inv_gain_Q32 = SKP_SMULWB(inv_gain_Q32, LTP_scale_Q14) << 2
 		}
 		for i = NSQ.SLTP_buf_idx - lag - LTP_ORDER/2; i < NSQ.SLTP_buf_idx; i++ {
+			SKP_assert(i < (FRAME_LENGTH_MS * MAX_FS_KHZ))
 			sLTP_Q16[i] = SKP_SMULWB(inv_gain_Q32, int32(sLTP[i]))
 		}
 	}
@@ -235,5 +245,6 @@ func SKP_Silk_nsq_scale_states(NSQ *SKP_Silk_nsq_state, x []int16, x_sc_Q10 []in
 	for i = 0; i < subfr_length; i++ {
 		x_sc_Q10[i] = SKP_SMULBB(int32(x[i]), int32(int16(inv_gain_Q16))) >> 6
 	}
+	SKP_assert(inv_gain_Q16 != 0)
 	NSQ.Prev_inv_gain_Q16 = inv_gain_Q16
 }

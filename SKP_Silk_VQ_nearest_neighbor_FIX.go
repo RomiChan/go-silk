@@ -17,6 +17,7 @@ func SKP_Silk_VQ_WMat_EC_FIX(ind *int32, rate_dist_Q14 *int32, in_Q14 []int16, W
 		diff_Q14[3] = in_Q14[3] - cb_row_Q14[3]
 		diff_Q14[4] = in_Q14[4] - cb_row_Q14[4]
 		sum1_Q14 = SKP_SMULBB(mu_Q8, int32(cl_Q6[k]))
+		SKP_assert(sum1_Q14 >= 0)
 		sum2_Q16 = SKP_SMULWB(W_Q18[1], int32(diff_Q14[1]))
 		sum2_Q16 = SKP_SMLAWB(sum2_Q16, W_Q18[2], int32(diff_Q14[2]))
 		sum2_Q16 = SKP_SMLAWB(sum2_Q16, W_Q18[3], int32(diff_Q14[3]))
@@ -41,6 +42,7 @@ func SKP_Silk_VQ_WMat_EC_FIX(ind *int32, rate_dist_Q14 *int32, in_Q14 []int16, W
 		sum1_Q14 = SKP_SMLAWB(sum1_Q14, sum2_Q16, int32(diff_Q14[3]))
 		sum2_Q16 = SKP_SMULWB(W_Q18[24], int32(diff_Q14[4]))
 		sum1_Q14 = SKP_SMLAWB(sum1_Q14, sum2_Q16, int32(diff_Q14[4]))
+		SKP_assert(sum1_Q14 >= 0)
 		if sum1_Q14 < *rate_dist_Q14 {
 			*rate_dist_Q14 = sum1_Q14
 			*ind = k

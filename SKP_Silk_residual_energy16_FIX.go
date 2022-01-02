@@ -16,6 +16,10 @@ func SKP_Silk_residual_energy16_covar_FIX(c *int16, wXX *int32, wXx *int32, wxx 
 		cn      [16]int32
 		pRow    *int32
 	)
+	SKP_assert(D >= 0)
+	SKP_assert(D <= 16)
+	SKP_assert(cQ > 0)
+	SKP_assert(cQ < 16)
 	lshifts = 16 - cQ
 	Qxtra = lshifts
 	c_max = 0
@@ -28,6 +32,7 @@ func SKP_Silk_residual_energy16_covar_FIX(c *int16, wXX *int32, wXx *int32, wxx 
 	Qxtra = SKP_max_int(Qxtra, 0)
 	for i = 0; i < D; i++ {
 		cn[i] = (int32(*(*int16)(unsafe.Add(unsafe.Pointer(c), unsafe.Sizeof(int16(0))*uintptr(i))))) << Qxtra
+		SKP_assert(SKP_abs(int64(cn[i])) <= (SKP_int16_MAX + 1))
 	}
 	lshifts -= Qxtra
 	tmp = 0

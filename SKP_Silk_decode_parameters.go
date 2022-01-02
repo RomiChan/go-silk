@@ -94,6 +94,7 @@ func SKP_Silk_decode_parameters(psDec *SKP_Silk_decoder_state, psDecCtrl *SKP_Si
 		SKP_Silk_range_decoder(&Ix, psRC, SKP_Silk_LTPscale_CDF[:], SKP_Silk_LTPscale_offset)
 		psDecCtrl.LTP_scale_Q14 = int32(SKP_Silk_LTPScales_table_Q14[Ix])
 	} else {
+		SKP_assert(psDecCtrl.Sigtype == SIG_TYPE_UNVOICED)
 		memset(unsafe.Pointer(&psDecCtrl.PitchL[0]), 0, NB_SUBFR*unsafe.Sizeof(int32(0)))
 		memset(unsafe.Pointer(&psDecCtrl.LTPCoef_Q14[0]), 0, LTP_ORDER*NB_SUBFR*unsafe.Sizeof(int16(0)))
 		psDecCtrl.PERIndex = 0

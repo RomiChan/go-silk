@@ -88,6 +88,7 @@ func limit_warped_coefs(coefs_syn_Q24 []int32, coefs_ana_Q24 []int32, lambda_Q16
 			coefs_ana_Q24[i] = SKP_SMULWW(gain_ana_Q16, coefs_ana_Q24[i])
 		}
 	}
+	SKP_assert(0)
 }
 func SKP_Silk_noise_shape_analysis_FIX(psEnc *SKP_Silk_encoder_state_FIX, psEncCtrl *SKP_Silk_encoder_control_FIX, pitch_res *int16, x []int16) {
 	var (
@@ -200,8 +201,11 @@ func SKP_Silk_noise_shape_analysis_FIX(psEnc *SKP_Silk_encoder_state_FIX, psEncC
 		}
 		auto_corr[0] = (auto_corr[0]) + SKP_max_32(SKP_SMULWB((auto_corr[0])>>4, SKP_FIX_CONST(1e-05, 20)), 1)
 		nrg = SKP_Silk_schur64(refl_coef_Q16[:], auto_corr[:], psEnc.SCmn.ShapingLPCOrder)
+		SKP_assert(nrg >= 0)
 		SKP_Silk_k2a_Q16(AR2_Q24[:], refl_coef_Q16[:], psEnc.SCmn.ShapingLPCOrder)
 		Qnrg = -scale
+		SKP_assert(int64(Qnrg) >= -12)
+		SKP_assert(Qnrg <= 30)
 		if Qnrg&1 != 0 {
 			Qnrg -= 1
 			nrg >>= 1
@@ -211,6 +215,7 @@ func SKP_Silk_noise_shape_analysis_FIX(psEnc *SKP_Silk_encoder_state_FIX, psEncC
 		psEncCtrl.Gains_Q16[k] = SKP_LSHIFT_SAT32(tmp32, 16-Qnrg)
 		if psEnc.SCmn.Warping_Q16 > 0 {
 			gain_mult_Q16 = warped_gain(AR2_Q24[:], warping_Q16, psEnc.SCmn.ShapingLPCOrder)
+			SKP_assert(psEncCtrl.Gains_Q16[k] >= 0)
 			psEncCtrl.Gains_Q16[k] = SKP_SMULWW(psEncCtrl.Gains_Q16[k], gain_mult_Q16)
 			if psEncCtrl.Gains_Q16[k] < 0 {
 				psEncCtrl.Gains_Q16[k] = SKP_int32_MAX
@@ -218,6 +223,7 @@ func SKP_Silk_noise_shape_analysis_FIX(psEnc *SKP_Silk_encoder_state_FIX, psEncC
 		}
 		SKP_Silk_bwexpander_32(AR2_Q24[:], psEnc.SCmn.ShapingLPCOrder, BWExp2_Q16)
 		memcpy(unsafe.Pointer(&AR1_Q24[0]), unsafe.Pointer(&AR2_Q24[0]), size_t(uintptr(psEnc.SCmn.ShapingLPCOrder)*unsafe.Sizeof(int32(0))))
+		SKP_assert(BWExp1_Q16 <= SKP_FIX_CONST(1.0, 16))
 		SKP_Silk_bwexpander_32(AR1_Q24[:], psEnc.SCmn.ShapingLPCOrder, BWExp1_Q16)
 		SKP_Silk_LPC_inverse_pred_gain_Q24(&pre_nrg_Q30, AR2_Q24[:], psEnc.SCmn.ShapingLPCOrder)
 		SKP_Silk_LPC_inverse_pred_gain_Q24(&nrg, AR1_Q24[:], psEnc.SCmn.ShapingLPCOrder)
@@ -234,6 +240,7 @@ func SKP_Silk_noise_shape_analysis_FIX(psEnc *SKP_Silk_encoder_state_FIX, psEncC
 	tmp32 = SKP_Silk_log2lin(SKP_SMLAWB(SKP_FIX_CONST(16.0, 7), SKP_FIX_CONST(-50.0, 7), SKP_FIX_CONST(0.16, 16)))
 	tmp32 = SKP_SMULWW(psEnc.AvgGain_Q16, tmp32)
 	gain_add_Q16 = SKP_ADD_SAT32(gain_add_Q16, tmp32)
+	SKP_assert(gain_mult_Q16 >= 0)
 	for k = 0; k < NB_SUBFR; k++ {
 		psEncCtrl.Gains_Q16[k] = SKP_SMULWW(psEncCtrl.Gains_Q16[k], gain_mult_Q16)
 		if psEncCtrl.Gains_Q16[k] < 0 {
@@ -255,6 +262,7 @@ func SKP_Silk_noise_shape_analysis_FIX(psEnc *SKP_Silk_encoder_state_FIX, psEncC
 			tmp32 = SKP_Silk_log2lin(SKP_FIX_CONST(16.0, 7) - SKP_SMULWB(essStrength_Q15, SKP_SMULWB(SKP_FIX_CONST(DE_ESSER_COEF_WB_dB, 7), SKP_FIX_CONST(0.16, 17))))
 			gain_mult_Q16 = SKP_SMULWW(gain_mult_Q16, tmp32)
 		} else {
+			SKP_assert(psEnc.SCmn.Fs_kHz == 12 || psEnc.SCmn.Fs_kHz == 8)
 		}
 	}
 	for k = 0; k < NB_SUBFR; k++ {
@@ -268,6 +276,7 @@ func SKP_Silk_noise_shape_analysis_FIX(psEnc *SKP_Silk_encoder_state_FIX, psEncC
 			psEncCtrl.LF_shp_Q14[k] = (SKP_FIX_CONST(1.0, 14) - b_Q14 - SKP_SMULWB(strength_Q16, b_Q14)) << 16
 			psEncCtrl.LF_shp_Q14[k] |= int32(uint16(int16(b_Q14 - SKP_FIX_CONST(1.0, 14))))
 		}
+		SKP_assert(SKP_FIX_CONST(HARM_HP_NOISE_COEF, 24) < SKP_FIX_CONST(0.5, 24))
 		Tilt_Q16 = -SKP_FIX_CONST(HP_NOISE_COEF, 16) - SKP_SMULWB(SKP_FIX_CONST(1.0, 16)-SKP_FIX_CONST(HP_NOISE_COEF, 16), SKP_SMULWB(SKP_FIX_CONST(HARM_HP_NOISE_COEF, 24), psEnc.Speech_activity_Q8))
 	} else {
 		b_Q14 = 0x5333 / psEnc.SCmn.Fs_kHz

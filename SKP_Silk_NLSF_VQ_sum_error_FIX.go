@@ -13,6 +13,8 @@ func SKP_Silk_NLSF_VQ_sum_error_FIX(err_Q20 []int32, in_Q15 []int32, w_Q6 []int3
 		Wcpy_Q6    [8]int32
 		cb_vec_Q15 *int16
 	)
+	SKP_assert(LPC_order <= 16)
+	SKP_assert((LPC_order & 1) == 0)
 	for m = 0; m < (LPC_order >> 1); m++ {
 		Wcpy_Q6[m] = w_Q6[m*2] | (w_Q6[m*2+1])<<16
 	}
@@ -37,6 +39,7 @@ func SKP_Silk_NLSF_VQ_sum_error_FIX(err_Q20 []int32, in_Q15 []int32, w_Q6 []int3
 				}()))
 				sum_error = SKP_SMLAWT(sum_error, SKP_SMULBB(diff_Q15, diff_Q15), Wtmp_Q6)
 			}
+			SKP_assert(sum_error >= 0)
 			err_Q20[i] = sum_error
 		}
 		err_Q20 += ([]int32)(K)

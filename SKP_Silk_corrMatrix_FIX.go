@@ -20,6 +20,7 @@ func SKP_Silk_corrVector_FIX(x []int16, t []int16, L int32, order int32, Xt []in
 			ptr1--
 		}
 	} else {
+		SKP_assert(rshifts == 0)
 		for lag = 0; lag < order; lag++ {
 			Xt[lag] = SKP_Silk_inner_prod_aligned(ptr1, ptr2, L)
 			ptr1--

@@ -49,3 +49,9 @@ func memmove(dst, src unsafe.Pointer, sz uintptr) unsafe.Pointer {
 	}
 	return memcpy(dst, src, sz)
 }
+
+func SKP_assert(cond bool) {
+	if !cond {
+		panic("assertion failed")
+	}
+}

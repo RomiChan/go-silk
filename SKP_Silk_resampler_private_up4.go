@@ -9,6 +9,8 @@ func SKP_Silk_resampler_private_up4(S []int32, out []int16, in []int16, len_ int
 		X     int32
 		out16 int16
 	)
+	SKP_assert(SKP_Silk_resampler_up2_lq_0 > 0)
+	SKP_assert(SKP_Silk_resampler_up2_lq_1 < 0)
 	for k = 0; k < len_; k++ {
 		in32 = (int32(in[k])) << 10
 		Y = in32 - (S[0])

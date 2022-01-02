@@ -14,6 +14,7 @@ func SKP_Silk_NLSF_stabilize(NLSF_Q15 []int32, NDeltaMin_Q15 []int32, L int32) {
 		I               int32 = 0
 		k               int32
 	)
+	SKP_assert(NDeltaMin_Q15[L] >= 1)
 	for loops = 0; loops < MAX_LOOPS; loops++ {
 		min_diff_Q15 = NLSF_Q15[0] - NDeltaMin_Q15[0]
 		I = 0
