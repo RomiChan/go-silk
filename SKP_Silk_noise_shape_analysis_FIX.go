@@ -70,8 +70,8 @@ func limit_warped_coefs(coefs_syn_Q24 []int32, coefs_ana_Q24 []int32, lambda_Q16
 			coefs_ana_Q24[i] = SKP_SMULWW(gain_ana_Q16, coefs_ana_Q24[i])
 		}
 		chirp_Q16 = SKP_FIX_CONST(0.99, 16) - SKP_DIV32_varQ(SKP_SMULWB(maxabs_Q24-limit_Q24, SKP_SMLABB(SKP_FIX_CONST(0.8, 10), SKP_FIX_CONST(0.1, 10), iter)), maxabs_Q24*(ind+1), 22)
-		SKP_Silk_bwexpander_32(&coefs_syn_Q24[0], order, chirp_Q16)
-		SKP_Silk_bwexpander_32(&coefs_ana_Q24[0], order, chirp_Q16)
+		SKP_Silk_bwexpander_32(coefs_syn_Q24, order, chirp_Q16)
+		SKP_Silk_bwexpander_32(coefs_ana_Q24, order, chirp_Q16)
 		lambda_Q16 = -lambda_Q16
 		for i = order - 1; i > 0; i-- {
 			coefs_syn_Q24[i-1] = SKP_SMLAWB(coefs_syn_Q24[i-1], coefs_syn_Q24[i], lambda_Q16)
@@ -121,10 +121,10 @@ func SKP_Silk_noise_shape_analysis_FIX(psEnc *SKP_Silk_encoder_state_FIX, psEncC
 		AR1_Q24             [16]int32
 		AR2_Q24             [16]int32
 		x_windowed          [360]int16
-		x_ptr               *int16
-		pitch_res_ptr       *int16
+		x_ptr               []int16
+		pitch_res_ptr       []int16
 	)
-	x_ptr = (*int16)(unsafe.Add(unsafe.Pointer(&x[0]), -int(unsafe.Sizeof(int16(0))*uintptr(psEnc.SCmn.La_shape))))
+	x_ptr = ([]int16)((*int16)(unsafe.Add(unsafe.Pointer(&x[0]), -int(unsafe.Sizeof(int16(0))*uintptr(psEnc.SCmn.La_shape)))))
 	psEncCtrl.Current_SNR_dB_Q7 = psEnc.SNR_dB_Q7 - SKP_SMULWB(psEnc.BufferedInChannel_ms<<7, SKP_FIX_CONST(0.05, 16))
 	if psEnc.Speech_activity_Q8 > SKP_FIX_CONST(0.5, 8) {
 		psEncCtrl.Current_SNR_dB_Q7 -= psEnc.InBandFEC_SNR_comp_Q8 >> 1
@@ -146,16 +146,16 @@ func SKP_Silk_noise_shape_analysis_FIX(psEnc *SKP_Silk_encoder_state_FIX, psEncC
 		nSamples = psEnc.SCmn.Fs_kHz << 1
 		energy_variation_Q7 = 0
 		log_energy_prev_Q7 = 0
-		pitch_res_ptr = pitch_res
+		pitch_res_ptr = ([]int16)(pitch_res)
 		for k = 0; k < FRAME_LENGTH_MS/2; k++ {
-			SKP_Silk_sum_sqr_shift(&nrg, &scale, ([]int16)(pitch_res_ptr), nSamples)
+			SKP_Silk_sum_sqr_shift(&nrg, &scale, pitch_res_ptr, nSamples)
 			nrg += nSamples >> scale
 			log_energy_Q7 = SKP_Silk_lin2log(nrg)
 			if k > 0 {
 				energy_variation_Q7 += int32(SKP_abs(int64(log_energy_Q7 - log_energy_prev_Q7)))
 			}
 			log_energy_prev_Q7 = log_energy_Q7
-			pitch_res_ptr = (*int16)(unsafe.Add(unsafe.Pointer(pitch_res_ptr), unsafe.Sizeof(int16(0))*uintptr(nSamples)))
+			pitch_res_ptr += ([]int16)(nSamples)
 		}
 		psEncCtrl.Sparseness_Q8 = SKP_Silk_sigm_Q15(SKP_SMULWB(energy_variation_Q7-SKP_FIX_CONST(5.0, 7), SKP_FIX_CONST(0.1, 16))) >> 7
 		if psEncCtrl.Sparseness_Q8 > SKP_FIX_CONST(0.75, 8) {
@@ -187,12 +187,12 @@ func SKP_Silk_noise_shape_analysis_FIX(psEnc *SKP_Silk_encoder_state_FIX, psEncC
 		)
 		flat_part = psEnc.SCmn.Fs_kHz * 5
 		slope_part = (psEnc.SCmn.ShapeWinLength - flat_part) >> 1
-		SKP_Silk_apply_sine_window(x_windowed[:], ([]int16)(x_ptr), 1, slope_part)
+		SKP_Silk_apply_sine_window(x_windowed[:], x_ptr, 1, slope_part)
 		shift = slope_part
-		memcpy(unsafe.Pointer(&x_windowed[shift]), unsafe.Pointer((*int16)(unsafe.Add(unsafe.Pointer(x_ptr), unsafe.Sizeof(int16(0))*uintptr(shift)))), size_t(uintptr(flat_part)*unsafe.Sizeof(int16(0))))
+		memcpy(unsafe.Pointer(&x_windowed[shift]), unsafe.Pointer(&x_ptr[shift]), size_t(uintptr(flat_part)*unsafe.Sizeof(int16(0))))
 		shift += flat_part
-		SKP_Silk_apply_sine_window(([]int16)(&x_windowed[shift]), ([]int16)((*int16)(unsafe.Add(unsafe.Pointer(x_ptr), unsafe.Sizeof(int16(0))*uintptr(shift)))), 2, slope_part)
-		x_ptr = (*int16)(unsafe.Add(unsafe.Pointer(x_ptr), unsafe.Sizeof(int16(0))*uintptr(psEnc.SCmn.Subfr_length)))
+		SKP_Silk_apply_sine_window(([]int16)(&x_windowed[shift]), ([]int16)(&x_ptr[shift]), 2, slope_part)
+		x_ptr += ([]int16)(psEnc.SCmn.Subfr_length)
 		if psEnc.SCmn.Warping_Q16 > 0 {
 			SKP_Silk_warped_autocorrelation_FIX(auto_corr[:], &scale, x_windowed[:], int16(warping_Q16), psEnc.SCmn.ShapeWinLength, psEnc.SCmn.ShapingLPCOrder)
 		} else {
@@ -216,9 +216,9 @@ func SKP_Silk_noise_shape_analysis_FIX(psEnc *SKP_Silk_encoder_state_FIX, psEncC
 				psEncCtrl.Gains_Q16[k] = SKP_int32_MAX
 			}
 		}
-		SKP_Silk_bwexpander_32(&AR2_Q24[0], psEnc.SCmn.ShapingLPCOrder, BWExp2_Q16)
+		SKP_Silk_bwexpander_32(AR2_Q24[:], psEnc.SCmn.ShapingLPCOrder, BWExp2_Q16)
 		memcpy(unsafe.Pointer(&AR1_Q24[0]), unsafe.Pointer(&AR2_Q24[0]), size_t(uintptr(psEnc.SCmn.ShapingLPCOrder)*unsafe.Sizeof(int32(0))))
-		SKP_Silk_bwexpander_32(&AR1_Q24[0], psEnc.SCmn.ShapingLPCOrder, BWExp1_Q16)
+		SKP_Silk_bwexpander_32(AR1_Q24[:], psEnc.SCmn.ShapingLPCOrder, BWExp1_Q16)
 		SKP_Silk_LPC_inverse_pred_gain_Q24(&pre_nrg_Q30, AR2_Q24[:], psEnc.SCmn.ShapingLPCOrder)
 		SKP_Silk_LPC_inverse_pred_gain_Q24(&nrg, AR1_Q24[:], psEnc.SCmn.ShapingLPCOrder)
 		pre_nrg_Q30 = SKP_SMULWB(pre_nrg_Q30, SKP_FIX_CONST(0.7, 15)) << 1

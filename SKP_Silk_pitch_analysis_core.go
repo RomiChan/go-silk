@@ -17,7 +17,7 @@ func SKP_Silk_pitch_analysis_core(signal []int16, pitch_out []int32, lagIndex *i
 		j                     int32
 		C                     [4][221]int16
 		target_ptr            []int16
-		basis_ptr             *int16
+		basis_ptr             []int16
 		cross_corr            int32
 		normalizer            int32
 		energy                int32
@@ -94,7 +94,7 @@ func SKP_Silk_pitch_analysis_core(signal []int16, pitch_out []int32, lagIndex *i
 	} else if Fs_kHz == 24 {
 		var filt_state_fix [8]int32
 		memset(unsafe.Pointer(&filt_state_fix[0]), 0, size_t(unsafe.Sizeof(int32(0))*8))
-		SKP_Silk_resampler_down3(&filt_state_fix[0], &signal_8kHz[0], &signal[0], PITCH_EST_FRAME_LENGTH_MS*24)
+		SKP_Silk_resampler_down3(filt_state_fix[:], signal_8kHz[:], signal, PITCH_EST_FRAME_LENGTH_MS*24)
 	} else {
 		memcpy(unsafe.Pointer(&signal_8kHz[0]), unsafe.Pointer(&signal[0]), size_t(uintptr(frame_length_8kHz)*unsafe.Sizeof(int16(0))))
 	}
@@ -112,18 +112,18 @@ func SKP_Silk_pitch_analysis_core(signal []int16, pitch_out []int32, lagIndex *i
 	}
 	target_ptr = ([]int16)(&signal_4kHz[frame_length_4kHz>>1])
 	for k = 0; k < 2; k++ {
-		basis_ptr = (*int16)(unsafe.Add(unsafe.Pointer(&target_ptr[0]), -int(unsafe.Sizeof(int16(0))*uintptr(min_lag_4kHz))))
+		basis_ptr = ([]int16)((*int16)(unsafe.Add(unsafe.Pointer(&target_ptr[0]), -int(unsafe.Sizeof(int16(0))*uintptr(min_lag_4kHz)))))
 		normalizer = 0
 		cross_corr = 0
-		cross_corr = SKP_Silk_inner_prod_aligned(target_ptr, ([]int16)(basis_ptr), sf_length_8kHz)
-		normalizer = SKP_Silk_inner_prod_aligned(([]int16)(basis_ptr), ([]int16)(basis_ptr), sf_length_8kHz)
+		cross_corr = SKP_Silk_inner_prod_aligned(target_ptr, basis_ptr, sf_length_8kHz)
+		normalizer = SKP_Silk_inner_prod_aligned(basis_ptr, basis_ptr, sf_length_8kHz)
 		normalizer = SKP_ADD_SAT32(normalizer, SKP_SMULBB(sf_length_8kHz, 4000))
 		temp32 = cross_corr / (SKP_Silk_SQRT_APPROX(normalizer) + 1)
 		C[k][min_lag_4kHz] = SKP_SAT16(temp32)
 		for d = min_lag_4kHz + 1; d <= max_lag_4kHz; d++ {
-			basis_ptr = (*int16)(unsafe.Add(unsafe.Pointer(basis_ptr), -int(unsafe.Sizeof(int16(0))*1)))
-			cross_corr = SKP_Silk_inner_prod_aligned(target_ptr, ([]int16)(basis_ptr), sf_length_8kHz)
-			normalizer += SKP_SMULBB(int32(*(*int16)(unsafe.Add(unsafe.Pointer(basis_ptr), unsafe.Sizeof(int16(0))*0))), int32(*(*int16)(unsafe.Add(unsafe.Pointer(basis_ptr), unsafe.Sizeof(int16(0))*0)))) - SKP_SMULBB(int32(*(*int16)(unsafe.Add(unsafe.Pointer(basis_ptr), unsafe.Sizeof(int16(0))*uintptr(sf_length_8kHz)))), int32(*(*int16)(unsafe.Add(unsafe.Pointer(basis_ptr), unsafe.Sizeof(int16(0))*uintptr(sf_length_8kHz)))))
+			basis_ptr--
+			cross_corr = SKP_Silk_inner_prod_aligned(target_ptr, basis_ptr, sf_length_8kHz)
+			normalizer += SKP_SMULBB(int32(basis_ptr[0]), int32(basis_ptr[0])) - SKP_SMULBB(int32(basis_ptr[sf_length_8kHz]), int32(basis_ptr[sf_length_8kHz]))
 			temp32 = cross_corr / (SKP_Silk_SQRT_APPROX(normalizer) + 1)
 			C[k][d] = SKP_SAT16(temp32)
 		}
@@ -196,9 +196,9 @@ func SKP_Silk_pitch_analysis_core(signal []int16, pitch_out []int32, lagIndex *i
 		energy_target = SKP_Silk_inner_prod_aligned(target_ptr, target_ptr, sf_length_8kHz)
 		for j = 0; j < length_d_comp; j++ {
 			d = int32(d_comp[j])
-			basis_ptr = (*int16)(unsafe.Add(unsafe.Pointer(&target_ptr[0]), -int(unsafe.Sizeof(int16(0))*uintptr(d))))
-			cross_corr = SKP_Silk_inner_prod_aligned(target_ptr, ([]int16)(basis_ptr), sf_length_8kHz)
-			energy_basis = SKP_Silk_inner_prod_aligned(([]int16)(basis_ptr), ([]int16)(basis_ptr), sf_length_8kHz)
+			basis_ptr = ([]int16)((*int16)(unsafe.Add(unsafe.Pointer(&target_ptr[0]), -int(unsafe.Sizeof(int16(0))*uintptr(d)))))
+			cross_corr = SKP_Silk_inner_prod_aligned(target_ptr, basis_ptr, sf_length_8kHz)
+			energy_basis = SKP_Silk_inner_prod_aligned(basis_ptr, basis_ptr, sf_length_8kHz)
 			if cross_corr > 0 {
 				if energy_target > energy_basis {
 					energy = energy_target
@@ -380,7 +380,7 @@ func SKP_Silk_pitch_analysis_core(signal []int16, pitch_out []int32, lagIndex *i
 func SKP_FIX_P_Ana_calc_corr_st3(cross_corr_st3 [4][34][5]int32, signal []int16, start_lag int32, sf_length int32, complexity int32) {
 	var (
 		target_ptr  []int16
-		basis_ptr   *int16
+		basis_ptr   []int16
 		cross_corr  int32
 		i           int32
 		j           int32
@@ -398,8 +398,8 @@ func SKP_FIX_P_Ana_calc_corr_st3(cross_corr_st3 [4][34][5]int32, signal []int16,
 	for k = 0; k < PITCH_EST_NB_SUBFR; k++ {
 		lag_counter = 0
 		for j = int32(SKP_Silk_Lag_range_stage3[complexity][k][0]); int64(j) <= int64(SKP_Silk_Lag_range_stage3[complexity][k][1]); j++ {
-			basis_ptr = (*int16)(unsafe.Add(unsafe.Pointer(&target_ptr[0]), -int(unsafe.Sizeof(int16(0))*uintptr(start_lag+j))))
-			cross_corr = SKP_Silk_inner_prod_aligned(target_ptr, ([]int16)(basis_ptr), sf_length)
+			basis_ptr = ([]int16)((*int16)(unsafe.Add(unsafe.Pointer(&target_ptr[0]), -int(unsafe.Sizeof(int16(0))*uintptr(start_lag+j)))))
+			cross_corr = SKP_Silk_inner_prod_aligned(target_ptr, basis_ptr, sf_length)
 			scratch_mem[lag_counter] = cross_corr
 			lag_counter++
 		}
@@ -416,7 +416,7 @@ func SKP_FIX_P_Ana_calc_corr_st3(cross_corr_st3 [4][34][5]int32, signal []int16,
 func SKP_FIX_P_Ana_calc_energy_st3(energies_st3 [4][34][5]int32, signal []int16, start_lag int32, sf_length int32, complexity int32) {
 	var (
 		target_ptr  []int16
-		basis_ptr   *int16
+		basis_ptr   []int16
 		energy      int32
 		k           int32
 		i           int32
@@ -433,13 +433,13 @@ func SKP_FIX_P_Ana_calc_energy_st3(energies_st3 [4][34][5]int32, signal []int16,
 	target_ptr = ([]int16)(&signal[sf_length<<2])
 	for k = 0; k < PITCH_EST_NB_SUBFR; k++ {
 		lag_counter = 0
-		basis_ptr = (*int16)(unsafe.Add(unsafe.Pointer(&target_ptr[0]), -int(unsafe.Sizeof(int16(0))*uintptr(int64(start_lag)+int64(SKP_Silk_Lag_range_stage3[complexity][k][0])))))
-		energy = SKP_Silk_inner_prod_aligned(([]int16)(basis_ptr), ([]int16)(basis_ptr), sf_length)
+		basis_ptr = ([]int16)((*int16)(unsafe.Add(unsafe.Pointer(&target_ptr[0]), -int(unsafe.Sizeof(int16(0))*uintptr(int64(start_lag)+int64(SKP_Silk_Lag_range_stage3[complexity][k][0]))))))
+		energy = SKP_Silk_inner_prod_aligned(basis_ptr, basis_ptr, sf_length)
 		scratch_mem[lag_counter] = energy
 		lag_counter++
 		for i = 1; int64(i) < int64(SKP_Silk_Lag_range_stage3[complexity][k][1]-SKP_Silk_Lag_range_stage3[complexity][k][0]+1); i++ {
-			energy -= SKP_SMULBB(int32(*(*int16)(unsafe.Add(unsafe.Pointer(basis_ptr), unsafe.Sizeof(int16(0))*uintptr(sf_length-i)))), int32(*(*int16)(unsafe.Add(unsafe.Pointer(basis_ptr), unsafe.Sizeof(int16(0))*uintptr(sf_length-i)))))
-			energy = SKP_ADD_SAT32(energy, SKP_SMULBB(int32(*(*int16)(unsafe.Add(unsafe.Pointer(basis_ptr), -int(unsafe.Sizeof(int16(0))*uintptr(i))))), int32(*(*int16)(unsafe.Add(unsafe.Pointer(basis_ptr), -int(unsafe.Sizeof(int16(0))*uintptr(i)))))))
+			energy -= SKP_SMULBB(int32(basis_ptr[sf_length-i]), int32(basis_ptr[sf_length-i]))
+			energy = SKP_ADD_SAT32(energy, SKP_SMULBB(int32(basis_ptr[-i]), int32(basis_ptr[-i])))
 			scratch_mem[lag_counter] = energy
 			lag_counter++
 		}

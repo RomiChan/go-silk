@@ -42,7 +42,7 @@ func SKP_Silk_NSQ(psEncC *SKP_Silk_encoder_state, psEncCtrlC *SKP_Silk_encoder_c
 			if (k & (3 - (LSF_interpolation_flag << 1))) == 0 {
 				start_idx = psEncC.Frame_length - lag - psEncC.PredictLPCOrder - LTP_ORDER/2
 				memset(unsafe.Pointer(&FiltState[0]), 0, size_t(uintptr(psEncC.PredictLPCOrder)*unsafe.Sizeof(int32(0))))
-				SKP_Silk_MA_Prediction(&NSQ.Xq[start_idx+k*(psEncC.Frame_length>>2)], A_Q12, &FiltState[0], &sLTP[start_idx], psEncC.Frame_length-start_idx, psEncC.PredictLPCOrder)
+				SKP_Silk_MA_Prediction(([]int16)(&NSQ.Xq[start_idx+k*(psEncC.Frame_length>>2)]), ([]int16)(A_Q12), FiltState[:], ([]int16)(&sLTP[start_idx]), psEncC.Frame_length-start_idx, psEncC.PredictLPCOrder)
 				NSQ.Rewhite_flag = 1
 				NSQ.SLTP_buf_idx = psEncC.Frame_length
 			}
@@ -79,13 +79,13 @@ func SKP_Silk_noise_shape_quantizer(NSQ *SKP_Silk_nsq_state, sigtype int32, x_sc
 		tmp1           int32
 		tmp2           int32
 		sLF_AR_shp_Q10 int32
-		psLPC_Q14      *int32
+		psLPC_Q14      []int32
 		shp_lag_ptr    *int32
-		pred_lag_ptr   *int32
+		pred_lag_ptr   []int32
 	)
 	shp_lag_ptr = &NSQ.SLTP_shp_Q10[NSQ.SLTP_shp_buf_idx-lag+HARM_SHAPE_FIR_TAPS/2]
-	pred_lag_ptr = &sLTP_Q16[NSQ.SLTP_buf_idx-lag+LTP_ORDER/2]
-	psLPC_Q14 = &NSQ.SLPC_Q14[DECISION_DELAY-1]
+	pred_lag_ptr = ([]int32)(&sLTP_Q16[NSQ.SLTP_buf_idx-lag+LTP_ORDER/2])
+	psLPC_Q14 = ([]int32)(&NSQ.SLPC_Q14[DECISION_DELAY-1])
 	thr1_Q10 = int32(int64(-1536) - int64(Lambda_Q10>>1))
 	thr2_Q10 = int32(int64(-512) - int64(Lambda_Q10>>1))
 	thr2_Q10 = thr2_Q10 + (SKP_SMULBB(offset_Q10, Lambda_Q10) >> 10)
@@ -93,30 +93,30 @@ func SKP_Silk_noise_shape_quantizer(NSQ *SKP_Silk_nsq_state, sigtype int32, x_sc
 	for i = 0; i < length; i++ {
 		NSQ.Rand_seed = int32((uint32(NSQ.Rand_seed) * 0xBB38435) + 0x3619636B)
 		dither = NSQ.Rand_seed >> 31
-		LPC_pred_Q10 = SKP_SMULWB(*(*int32)(unsafe.Add(unsafe.Pointer(psLPC_Q14), unsafe.Sizeof(int32(0))*0)), int32(a_Q12[0]))
-		LPC_pred_Q10 = SKP_SMLAWB(LPC_pred_Q10, *(*int32)(unsafe.Add(unsafe.Pointer(psLPC_Q14), -int(unsafe.Sizeof(int32(0))*1))), int32(a_Q12[1]))
-		LPC_pred_Q10 = SKP_SMLAWB(LPC_pred_Q10, *(*int32)(unsafe.Add(unsafe.Pointer(psLPC_Q14), -int(unsafe.Sizeof(int32(0))*2))), int32(a_Q12[2]))
-		LPC_pred_Q10 = SKP_SMLAWB(LPC_pred_Q10, *(*int32)(unsafe.Add(unsafe.Pointer(psLPC_Q14), -int(unsafe.Sizeof(int32(0))*3))), int32(a_Q12[3]))
-		LPC_pred_Q10 = SKP_SMLAWB(LPC_pred_Q10, *(*int32)(unsafe.Add(unsafe.Pointer(psLPC_Q14), -int(unsafe.Sizeof(int32(0))*4))), int32(a_Q12[4]))
-		LPC_pred_Q10 = SKP_SMLAWB(LPC_pred_Q10, *(*int32)(unsafe.Add(unsafe.Pointer(psLPC_Q14), -int(unsafe.Sizeof(int32(0))*5))), int32(a_Q12[5]))
-		LPC_pred_Q10 = SKP_SMLAWB(LPC_pred_Q10, *(*int32)(unsafe.Add(unsafe.Pointer(psLPC_Q14), -int(unsafe.Sizeof(int32(0))*6))), int32(a_Q12[6]))
-		LPC_pred_Q10 = SKP_SMLAWB(LPC_pred_Q10, *(*int32)(unsafe.Add(unsafe.Pointer(psLPC_Q14), -int(unsafe.Sizeof(int32(0))*7))), int32(a_Q12[7]))
-		LPC_pred_Q10 = SKP_SMLAWB(LPC_pred_Q10, *(*int32)(unsafe.Add(unsafe.Pointer(psLPC_Q14), -int(unsafe.Sizeof(int32(0))*8))), int32(a_Q12[8]))
-		LPC_pred_Q10 = SKP_SMLAWB(LPC_pred_Q10, *(*int32)(unsafe.Add(unsafe.Pointer(psLPC_Q14), -int(unsafe.Sizeof(int32(0))*9))), int32(a_Q12[9]))
+		LPC_pred_Q10 = SKP_SMULWB(psLPC_Q14[0], int32(a_Q12[0]))
+		LPC_pred_Q10 = SKP_SMLAWB(LPC_pred_Q10, psLPC_Q14[-1], int32(a_Q12[1]))
+		LPC_pred_Q10 = SKP_SMLAWB(LPC_pred_Q10, psLPC_Q14[-2], int32(a_Q12[2]))
+		LPC_pred_Q10 = SKP_SMLAWB(LPC_pred_Q10, psLPC_Q14[-3], int32(a_Q12[3]))
+		LPC_pred_Q10 = SKP_SMLAWB(LPC_pred_Q10, psLPC_Q14[-4], int32(a_Q12[4]))
+		LPC_pred_Q10 = SKP_SMLAWB(LPC_pred_Q10, psLPC_Q14[-5], int32(a_Q12[5]))
+		LPC_pred_Q10 = SKP_SMLAWB(LPC_pred_Q10, psLPC_Q14[-6], int32(a_Q12[6]))
+		LPC_pred_Q10 = SKP_SMLAWB(LPC_pred_Q10, psLPC_Q14[-7], int32(a_Q12[7]))
+		LPC_pred_Q10 = SKP_SMLAWB(LPC_pred_Q10, psLPC_Q14[-8], int32(a_Q12[8]))
+		LPC_pred_Q10 = SKP_SMLAWB(LPC_pred_Q10, psLPC_Q14[-9], int32(a_Q12[9]))
 		for j = 10; j < predictLPCOrder; j++ {
-			LPC_pred_Q10 = SKP_SMLAWB(LPC_pred_Q10, *(*int32)(unsafe.Add(unsafe.Pointer(psLPC_Q14), -int(unsafe.Sizeof(int32(0))*uintptr(j)))), int32(a_Q12[j]))
+			LPC_pred_Q10 = SKP_SMLAWB(LPC_pred_Q10, psLPC_Q14[-j], int32(a_Q12[j]))
 		}
 		if sigtype == SIG_TYPE_VOICED {
-			LTP_pred_Q14 = SKP_SMULWB(*(*int32)(unsafe.Add(unsafe.Pointer(pred_lag_ptr), unsafe.Sizeof(int32(0))*0)), int32(b_Q14[0]))
-			LTP_pred_Q14 = SKP_SMLAWB(LTP_pred_Q14, *(*int32)(unsafe.Add(unsafe.Pointer(pred_lag_ptr), -int(unsafe.Sizeof(int32(0))*1))), int32(b_Q14[1]))
-			LTP_pred_Q14 = SKP_SMLAWB(LTP_pred_Q14, *(*int32)(unsafe.Add(unsafe.Pointer(pred_lag_ptr), -int(unsafe.Sizeof(int32(0))*2))), int32(b_Q14[2]))
-			LTP_pred_Q14 = SKP_SMLAWB(LTP_pred_Q14, *(*int32)(unsafe.Add(unsafe.Pointer(pred_lag_ptr), -int(unsafe.Sizeof(int32(0))*3))), int32(b_Q14[3]))
-			LTP_pred_Q14 = SKP_SMLAWB(LTP_pred_Q14, *(*int32)(unsafe.Add(unsafe.Pointer(pred_lag_ptr), -int(unsafe.Sizeof(int32(0))*4))), int32(b_Q14[4]))
-			pred_lag_ptr = (*int32)(unsafe.Add(unsafe.Pointer(pred_lag_ptr), unsafe.Sizeof(int32(0))*1))
+			LTP_pred_Q14 = SKP_SMULWB(pred_lag_ptr[0], int32(b_Q14[0]))
+			LTP_pred_Q14 = SKP_SMLAWB(LTP_pred_Q14, pred_lag_ptr[-1], int32(b_Q14[1]))
+			LTP_pred_Q14 = SKP_SMLAWB(LTP_pred_Q14, pred_lag_ptr[-2], int32(b_Q14[2]))
+			LTP_pred_Q14 = SKP_SMLAWB(LTP_pred_Q14, pred_lag_ptr[-3], int32(b_Q14[3]))
+			LTP_pred_Q14 = SKP_SMLAWB(LTP_pred_Q14, pred_lag_ptr[-4], int32(b_Q14[4]))
+			pred_lag_ptr++
 		} else {
 			LTP_pred_Q14 = 0
 		}
-		tmp2 = *(*int32)(unsafe.Add(unsafe.Pointer(psLPC_Q14), unsafe.Sizeof(int32(0))*0))
+		tmp2 = psLPC_Q14[0]
 		tmp1 = NSQ.SAR2_Q14[0]
 		NSQ.SAR2_Q14[0] = tmp2
 		n_AR_Q10 = SKP_SMULWB(tmp2, int32(AR_shp_Q13[0]))
@@ -173,8 +173,8 @@ func SKP_Silk_noise_shape_quantizer(NSQ *SKP_Silk_nsq_state, sigtype int32, x_sc
 		LPC_exc_Q10 = exc_Q10 + SKP_RSHIFT_ROUND(LTP_pred_Q14, 4)
 		xq_Q10 = LPC_exc_Q10 + LPC_pred_Q10
 		xq[i] = SKP_SAT16(SKP_RSHIFT_ROUND(SKP_SMULWW(xq_Q10, Gain_Q16), 10))
-		psLPC_Q14 = (*int32)(unsafe.Add(unsafe.Pointer(psLPC_Q14), unsafe.Sizeof(int32(0))*1))
-		*psLPC_Q14 = xq_Q10 << 4
+		psLPC_Q14++
+		psLPC_Q14[0] = xq_Q10 << 4
 		sLF_AR_shp_Q10 = xq_Q10 - n_AR_Q10
 		NSQ.SLF_AR_shp_Q12 = sLF_AR_shp_Q10 << 2
 		NSQ.SLTP_shp_Q10[NSQ.SLTP_shp_buf_idx] = sLF_AR_shp_Q10 - n_LF_Q10

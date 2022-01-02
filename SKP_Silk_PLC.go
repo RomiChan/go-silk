@@ -128,7 +128,7 @@ func SKP_Silk_PLC_conceal(psDec *SKP_Silk_decoder_state, psDecCtrl *SKP_Silk_dec
 	var energy1 int32
 	var energy2 int32
 	var rand_ptr *int32
-	var pred_lag_ptr *int32
+	var pred_lag_ptr []int32
 	var sig_Q10 [480]int32
 	var sig_Q10_ptr []int32
 	var LPC_exc_Q10 int32
@@ -186,16 +186,16 @@ func SKP_Silk_PLC_conceal(psDec *SKP_Silk_decoder_state, psDecCtrl *SKP_Silk_dec
 	sLTP_buf_idx = psDec.Frame_length
 	sig_Q10_ptr = ([]int32)(sig_Q10[:])
 	for k = 0; k < NB_SUBFR; k++ {
-		pred_lag_ptr = &psDec.SLTP_Q16[sLTP_buf_idx-lag+LTP_ORDER/2]
+		pred_lag_ptr = ([]int32)(&psDec.SLTP_Q16[sLTP_buf_idx-lag+LTP_ORDER/2])
 		for i = 0; i < psDec.Subfr_length; i++ {
 			rand_seed = int32((uint32(rand_seed) * 0xBB38435) + 0x3619636B)
 			idx = (rand_seed >> 25) & (RAND_BUF_SIZE - 1)
-			LTP_pred_Q14 = SKP_SMULWB(*(*int32)(unsafe.Add(unsafe.Pointer(pred_lag_ptr), unsafe.Sizeof(int32(0))*0)), int32(B_Q14[0]))
-			LTP_pred_Q14 = SKP_SMLAWB(LTP_pred_Q14, *(*int32)(unsafe.Add(unsafe.Pointer(pred_lag_ptr), -int(unsafe.Sizeof(int32(0))*1))), int32(B_Q14[1]))
-			LTP_pred_Q14 = SKP_SMLAWB(LTP_pred_Q14, *(*int32)(unsafe.Add(unsafe.Pointer(pred_lag_ptr), -int(unsafe.Sizeof(int32(0))*2))), int32(B_Q14[2]))
-			LTP_pred_Q14 = SKP_SMLAWB(LTP_pred_Q14, *(*int32)(unsafe.Add(unsafe.Pointer(pred_lag_ptr), -int(unsafe.Sizeof(int32(0))*3))), int32(B_Q14[3]))
-			LTP_pred_Q14 = SKP_SMLAWB(LTP_pred_Q14, *(*int32)(unsafe.Add(unsafe.Pointer(pred_lag_ptr), -int(unsafe.Sizeof(int32(0))*4))), int32(B_Q14[4]))
-			pred_lag_ptr = (*int32)(unsafe.Add(unsafe.Pointer(pred_lag_ptr), unsafe.Sizeof(int32(0))*1))
+			LTP_pred_Q14 = SKP_SMULWB(pred_lag_ptr[0], int32(B_Q14[0]))
+			LTP_pred_Q14 = SKP_SMLAWB(LTP_pred_Q14, pred_lag_ptr[-1], int32(B_Q14[1]))
+			LTP_pred_Q14 = SKP_SMLAWB(LTP_pred_Q14, pred_lag_ptr[-2], int32(B_Q14[2]))
+			LTP_pred_Q14 = SKP_SMLAWB(LTP_pred_Q14, pred_lag_ptr[-3], int32(B_Q14[3]))
+			LTP_pred_Q14 = SKP_SMLAWB(LTP_pred_Q14, pred_lag_ptr[-4], int32(B_Q14[4]))
+			pred_lag_ptr++
 			LPC_exc_Q10 = SKP_SMULWB(*(*int32)(unsafe.Add(unsafe.Pointer(rand_ptr), unsafe.Sizeof(int32(0))*uintptr(idx))), int32(rand_scale_Q14)) << 2
 			LPC_exc_Q10 = LPC_exc_Q10 + SKP_RSHIFT_ROUND(LTP_pred_Q14, 4)
 			psDec.SLTP_Q16[sLTP_buf_idx] = LPC_exc_Q10 << 6

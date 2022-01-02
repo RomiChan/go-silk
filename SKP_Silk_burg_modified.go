@@ -26,14 +26,14 @@ func SKP_Silk_burg_modified(res_nrg *int32, res_nrg_Q *int32, A_Q16 []int32, x [
 		tmp2          int32
 		x1            int32
 		x2            int32
-		x_ptr         *int16
+		x_ptr         []int16
 		C_first_row   [16]int32
 		C_last_row    [16]int32
 		Af_25         [16]int32
 		CAf           [17]int32
 		CAb           [17]int32
 	)
-	SKP_Silk_sum_sqr_shift(&C0, &rshifts, &x[0], nb_subfr*subfr_length)
+	SKP_Silk_sum_sqr_shift(&C0, &rshifts, x, nb_subfr*subfr_length)
 	if rshifts > (32 - 25) {
 		C0 = C0 << (rshifts - (32 - 25))
 		rshifts = 32 - 25
@@ -60,16 +60,16 @@ func SKP_Silk_burg_modified(res_nrg *int32, res_nrg_Q *int32, A_Q16 []int32, x [
 	memset(unsafe.Pointer(&C_first_row[0]), 0, size_t(SKP_Silk_MAX_ORDER_LPC*unsafe.Sizeof(int32(0))))
 	if rshifts > 0 {
 		for s = 0; s < nb_subfr; s++ {
-			x_ptr = &x[s*subfr_length]
+			x_ptr = ([]int16)(&x[s*subfr_length])
 			for n = 1; n < D+1; n++ {
-				C_first_row[n-1] += int32(SKP_Silk_inner_prod16_aligned_64(([]int16)(x_ptr), ([]int16)((*int16)(unsafe.Add(unsafe.Pointer(x_ptr), unsafe.Sizeof(int16(0))*uintptr(n)))), subfr_length-n) >> int64(rshifts))
+				C_first_row[n-1] += int32(SKP_Silk_inner_prod16_aligned_64(x_ptr, ([]int16)(&x_ptr[n]), subfr_length-n) >> int64(rshifts))
 			}
 		}
 	} else {
 		for s = 0; s < nb_subfr; s++ {
-			x_ptr = &x[s*subfr_length]
+			x_ptr = ([]int16)(&x[s*subfr_length])
 			for n = 1; n < D+1; n++ {
-				C_first_row[n-1] += SKP_Silk_inner_prod_aligned(([]int16)(x_ptr), ([]int16)((*int16)(unsafe.Add(unsafe.Pointer(x_ptr), unsafe.Sizeof(int16(0))*uintptr(n)))), subfr_length-n) << (-rshifts)
+				C_first_row[n-1] += SKP_Silk_inner_prod_aligned(x_ptr, ([]int16)(&x_ptr[n]), subfr_length-n) << (-rshifts)
 			}
 		}
 	}
@@ -82,44 +82,44 @@ func SKP_Silk_burg_modified(res_nrg *int32, res_nrg_Q *int32, A_Q16 []int32, x [
 	for n = 0; n < D; n++ {
 		if int64(rshifts) > -2 {
 			for s = 0; s < nb_subfr; s++ {
-				x_ptr = &x[s*subfr_length]
-				x1 = -((int32(*(*int16)(unsafe.Add(unsafe.Pointer(x_ptr), unsafe.Sizeof(int16(0))*uintptr(n))))) << (16 - rshifts))
-				x2 = -((int32(*(*int16)(unsafe.Add(unsafe.Pointer(x_ptr), unsafe.Sizeof(int16(0))*uintptr(subfr_length-n-1))))) << (16 - rshifts))
-				tmp1 = (int32(*(*int16)(unsafe.Add(unsafe.Pointer(x_ptr), unsafe.Sizeof(int16(0))*uintptr(n))))) << (25 - 16)
-				tmp2 = (int32(*(*int16)(unsafe.Add(unsafe.Pointer(x_ptr), unsafe.Sizeof(int16(0))*uintptr(subfr_length-n-1))))) << (25 - 16)
+				x_ptr = ([]int16)(&x[s*subfr_length])
+				x1 = -((int32(x_ptr[n])) << (16 - rshifts))
+				x2 = -((int32(x_ptr[subfr_length-n-1])) << (16 - rshifts))
+				tmp1 = (int32(x_ptr[n])) << (25 - 16)
+				tmp2 = (int32(x_ptr[subfr_length-n-1])) << (25 - 16)
 				for k = 0; k < n; k++ {
-					C_first_row[k] = SKP_SMLAWB(C_first_row[k], x1, int32(*(*int16)(unsafe.Add(unsafe.Pointer(x_ptr), unsafe.Sizeof(int16(0))*uintptr(n-k-1)))))
-					C_last_row[k] = SKP_SMLAWB(C_last_row[k], x2, int32(*(*int16)(unsafe.Add(unsafe.Pointer(x_ptr), unsafe.Sizeof(int16(0))*uintptr(subfr_length-n+k)))))
+					C_first_row[k] = SKP_SMLAWB(C_first_row[k], x1, int32(x_ptr[n-k-1]))
+					C_last_row[k] = SKP_SMLAWB(C_last_row[k], x2, int32(x_ptr[subfr_length-n+k]))
 					Atmp_25 = Af_25[k]
-					tmp1 = SKP_SMLAWB(tmp1, Atmp_25, int32(*(*int16)(unsafe.Add(unsafe.Pointer(x_ptr), unsafe.Sizeof(int16(0))*uintptr(n-k-1)))))
-					tmp2 = SKP_SMLAWB(tmp2, Atmp_25, int32(*(*int16)(unsafe.Add(unsafe.Pointer(x_ptr), unsafe.Sizeof(int16(0))*uintptr(subfr_length-n+k)))))
+					tmp1 = SKP_SMLAWB(tmp1, Atmp_25, int32(x_ptr[n-k-1]))
+					tmp2 = SKP_SMLAWB(tmp2, Atmp_25, int32(x_ptr[subfr_length-n+k]))
 				}
 				tmp1 = (-tmp1) << (32 - 25 - rshifts)
 				tmp2 = (-tmp2) << (32 - 25 - rshifts)
 				for k = 0; k <= n; k++ {
-					CAf[k] = SKP_SMLAWB(CAf[k], tmp1, int32(*(*int16)(unsafe.Add(unsafe.Pointer(x_ptr), unsafe.Sizeof(int16(0))*uintptr(n-k)))))
-					CAb[k] = SKP_SMLAWB(CAb[k], tmp2, int32(*(*int16)(unsafe.Add(unsafe.Pointer(x_ptr), unsafe.Sizeof(int16(0))*uintptr(subfr_length-n+k-1)))))
+					CAf[k] = SKP_SMLAWB(CAf[k], tmp1, int32(x_ptr[n-k]))
+					CAb[k] = SKP_SMLAWB(CAb[k], tmp2, int32(x_ptr[subfr_length-n+k-1]))
 				}
 			}
 		} else {
 			for s = 0; s < nb_subfr; s++ {
-				x_ptr = &x[s*subfr_length]
-				x1 = -((int32(*(*int16)(unsafe.Add(unsafe.Pointer(x_ptr), unsafe.Sizeof(int16(0))*uintptr(n))))) << (-rshifts))
-				x2 = -((int32(*(*int16)(unsafe.Add(unsafe.Pointer(x_ptr), unsafe.Sizeof(int16(0))*uintptr(subfr_length-n-1))))) << (-rshifts))
-				tmp1 = (int32(*(*int16)(unsafe.Add(unsafe.Pointer(x_ptr), unsafe.Sizeof(int16(0))*uintptr(n))))) << 17
-				tmp2 = (int32(*(*int16)(unsafe.Add(unsafe.Pointer(x_ptr), unsafe.Sizeof(int16(0))*uintptr(subfr_length-n-1))))) << 17
+				x_ptr = ([]int16)(&x[s*subfr_length])
+				x1 = -((int32(x_ptr[n])) << (-rshifts))
+				x2 = -((int32(x_ptr[subfr_length-n-1])) << (-rshifts))
+				tmp1 = (int32(x_ptr[n])) << 17
+				tmp2 = (int32(x_ptr[subfr_length-n-1])) << 17
 				for k = 0; k < n; k++ {
-					C_first_row[k] = int32(int64(C_first_row[k]) + int64(x1)*int64(*(*int16)(unsafe.Add(unsafe.Pointer(x_ptr), unsafe.Sizeof(int16(0))*uintptr(n-k-1)))))
-					C_last_row[k] = int32(int64(C_last_row[k]) + int64(x2)*int64(*(*int16)(unsafe.Add(unsafe.Pointer(x_ptr), unsafe.Sizeof(int16(0))*uintptr(subfr_length-n+k)))))
+					C_first_row[k] = int32(int64(C_first_row[k]) + int64(x1)*int64(x_ptr[n-k-1]))
+					C_last_row[k] = int32(int64(C_last_row[k]) + int64(x2)*int64(x_ptr[subfr_length-n+k]))
 					Atmp1 = SKP_RSHIFT_ROUND(Af_25[k], 25-17)
-					tmp1 = int32(int64(tmp1) + int64(*(*int16)(unsafe.Add(unsafe.Pointer(x_ptr), unsafe.Sizeof(int16(0))*uintptr(n-k-1))))*int64(Atmp1))
-					tmp2 = int32(int64(tmp2) + int64(*(*int16)(unsafe.Add(unsafe.Pointer(x_ptr), unsafe.Sizeof(int16(0))*uintptr(subfr_length-n+k))))*int64(Atmp1))
+					tmp1 = int32(int64(tmp1) + int64(x_ptr[n-k-1])*int64(Atmp1))
+					tmp2 = int32(int64(tmp2) + int64(x_ptr[subfr_length-n+k])*int64(Atmp1))
 				}
 				tmp1 = -tmp1
 				tmp2 = -tmp2
 				for k = 0; k <= n; k++ {
-					CAf[k] = SKP_SMLAWW(CAf[k], tmp1, (int32(*(*int16)(unsafe.Add(unsafe.Pointer(x_ptr), unsafe.Sizeof(int16(0))*uintptr(n-k)))))<<(-rshifts-1))
-					CAb[k] = SKP_SMLAWW(CAb[k], tmp2, (int32(*(*int16)(unsafe.Add(unsafe.Pointer(x_ptr), unsafe.Sizeof(int16(0))*uintptr(subfr_length-n+k-1)))))<<(-rshifts-1))
+					CAf[k] = SKP_SMLAWW(CAf[k], tmp1, (int32(x_ptr[n-k]))<<(-rshifts-1))
+					CAb[k] = SKP_SMLAWW(CAb[k], tmp2, (int32(x_ptr[subfr_length-n+k-1]))<<(-rshifts-1))
 				}
 			}
 		}

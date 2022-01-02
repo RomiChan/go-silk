@@ -1,9 +1,6 @@
 package silk
 
-import (
-	"math"
-	"unsafe"
-)
+import "unsafe"
 
 const LTP_CORRS_HEAD_ROOM = 2
 
@@ -12,11 +9,11 @@ func SKP_Silk_find_LTP_FIX(b_Q14 [20]int16, WLTP [100]int32, LTPredCodGain_Q7 *i
 		i                int32
 		k                int32
 		lshift           int32
-		r_ptr            *int16
+		r_ptr            []int16
 		lag_ptr          *int16
 		b_Q14_ptr        *int16
 		regu             int32
-		WLTP_ptr         *int32
+		WLTP_ptr         []int32
 		b_Q16            [5]int32
 		delta_b_Q14      [5]int32
 		d_Q14            [4]int32
@@ -42,13 +39,13 @@ func SKP_Silk_find_LTP_FIX(b_Q14 [20]int16, WLTP [100]int32, LTPredCodGain_Q7 *i
 		m_Q12            int32
 	)
 	b_Q14_ptr = &b_Q14[0]
-	WLTP_ptr = &WLTP[0]
-	r_ptr = &r_first[mem_offset]
+	WLTP_ptr = ([]int32)(WLTP[:])
+	r_ptr = ([]int16)(&r_first[mem_offset])
 	for k = 0; k < NB_SUBFR; k++ {
 		if k == (NB_SUBFR >> 1) {
-			r_ptr = &r_last[mem_offset]
+			r_ptr = ([]int16)(&r_last[mem_offset])
 		}
-		lag_ptr = (*int16)(unsafe.Add(unsafe.Pointer(r_ptr), -int(unsafe.Sizeof(int16(0))*uintptr(lag[k]+LTP_ORDER/2))))
+		lag_ptr = (*int16)(unsafe.Add(unsafe.Pointer(&r_ptr[0]), -int(unsafe.Sizeof(int16(0))*uintptr(lag[k]+LTP_ORDER/2))))
 		SKP_Silk_sum_sqr_shift(&rr[k], &rr_shifts, r_ptr, subfr_length)
 		LZs = SKP_Silk_CLZ32(rr[k])
 		if LZs < LTP_CORRS_HEAD_ROOM {
@@ -56,19 +53,19 @@ func SKP_Silk_find_LTP_FIX(b_Q14 [20]int16, WLTP [100]int32, LTPredCodGain_Q7 *i
 			rr_shifts += LTP_CORRS_HEAD_ROOM - LZs
 		}
 		corr_rshifts[k] = rr_shifts
-		SKP_Silk_corrMatrix_FIX(lag_ptr, subfr_length, LTP_ORDER, LTP_CORRS_HEAD_ROOM, WLTP_ptr, &corr_rshifts[k])
-		SKP_Silk_corrVector_FIX(lag_ptr, r_ptr, subfr_length, LTP_ORDER, &Rr[0], corr_rshifts[k])
+		SKP_Silk_corrMatrix_FIX(([]int16)(lag_ptr), subfr_length, LTP_ORDER, LTP_CORRS_HEAD_ROOM, &WLTP_ptr[0], &corr_rshifts[k])
+		SKP_Silk_corrVector_FIX(([]int16)(lag_ptr), r_ptr, subfr_length, LTP_ORDER, Rr[:], corr_rshifts[k])
 		if corr_rshifts[k] > rr_shifts {
 			rr[k] = (rr[k]) >> (corr_rshifts[k] - rr_shifts)
 		}
 		regu = 1
 		regu = SKP_SMLAWB(regu, rr[k], SKP_FIX_CONST(0.01/3, 16))
-		regu = SKP_SMLAWB(regu, *((*int32)(unsafe.Add(unsafe.Pointer(WLTP_ptr), unsafe.Sizeof(int32(0))*uintptr(LTP_ORDER*0+0)))), SKP_FIX_CONST(0.01/3, 16))
-		regu = SKP_SMLAWB(regu, *((*int32)(unsafe.Add(unsafe.Pointer(WLTP_ptr), unsafe.Sizeof(int32(0))*uintptr((LTP_ORDER-1)*LTP_ORDER+(LTP_ORDER-1))))), SKP_FIX_CONST(0.01/3, 16))
-		SKP_Silk_regularize_correlations_FIX(WLTP_ptr, &rr[k], regu, LTP_ORDER)
-		SKP_Silk_solve_LDL_FIX(WLTP_ptr, LTP_ORDER, &Rr[0], &b_Q16[0])
+		regu = SKP_SMLAWB(regu, WLTP_ptr[LTP_ORDER*0+0], SKP_FIX_CONST(0.01/3, 16))
+		regu = SKP_SMLAWB(regu, WLTP_ptr[(LTP_ORDER-1)*LTP_ORDER+(LTP_ORDER-1)], SKP_FIX_CONST(0.01/3, 16))
+		SKP_Silk_regularize_correlations_FIX(WLTP_ptr, ([]int32)(&rr[k]), regu, LTP_ORDER)
+		SKP_Silk_solve_LDL_FIX(&WLTP_ptr[0], LTP_ORDER, &Rr[0], &b_Q16[0])
 		SKP_Silk_fit_LTP(b_Q16[:], ([]int16)(b_Q14_ptr))
-		nrg[k] = SKP_Silk_residual_energy16_covar_FIX(b_Q14_ptr, WLTP_ptr, &Rr[0], rr[k], LTP_ORDER, 14)
+		nrg[k] = SKP_Silk_residual_energy16_covar_FIX(b_Q14_ptr, &WLTP_ptr[0], &Rr[0], rr[k], LTP_ORDER, 14)
 		extra_shifts = SKP_min_int(corr_rshifts[k], LTP_CORRS_HEAD_ROOM)
 		denom32 = SKP_LSHIFT_SAT32(SKP_SMULWB(nrg[k], Wght_Q15[k]), extra_shifts+1) + (SKP_SMULWB(subfr_length, 655) >> (corr_rshifts[k] - extra_shifts))
 		if denom32 > 1 {
@@ -80,8 +77,8 @@ func SKP_Silk_find_LTP_FIX(b_Q14 [20]int16, WLTP [100]int32, LTPredCodGain_Q7 *i
 		temp32 = temp32 >> (corr_rshifts[k] + 31 - extra_shifts - 26)
 		WLTP_max = 0
 		for i = 0; i < LTP_ORDER*LTP_ORDER; i++ {
-			if (*(*int32)(unsafe.Add(unsafe.Pointer(WLTP_ptr), unsafe.Sizeof(int32(0))*uintptr(i)))) > WLTP_max {
-				WLTP_max = *(*int32)(unsafe.Add(unsafe.Pointer(WLTP_ptr), unsafe.Sizeof(int32(0))*uintptr(i)))
+			if (WLTP_ptr[i]) > WLTP_max {
+				WLTP_max = WLTP_ptr[i]
 			} else {
 				WLTP_max = WLTP_max
 			}
@@ -91,10 +88,10 @@ func SKP_Silk_find_LTP_FIX(b_Q14 [20]int16, WLTP [100]int32, LTPredCodGain_Q7 *i
 			temp32 = SKP_min_32(temp32, 1<<(lshift+(26-18)))
 		}
 		SKP_Silk_scale_vector32_Q26_lshift_18(WLTP_ptr, temp32, LTP_ORDER*LTP_ORDER)
-		w[k] = *((*int32)(unsafe.Add(unsafe.Pointer(WLTP_ptr), unsafe.Sizeof(int32(0))*uintptr((LTP_ORDER>>1)*LTP_ORDER+(LTP_ORDER>>1)))))
-		r_ptr = (*int16)(unsafe.Add(unsafe.Pointer(r_ptr), unsafe.Sizeof(int16(0))*uintptr(subfr_length)))
+		w[k] = WLTP_ptr[(LTP_ORDER>>1)*LTP_ORDER+(LTP_ORDER>>1)]
+		r_ptr += ([]int16)(subfr_length)
 		b_Q14_ptr = (*int16)(unsafe.Add(unsafe.Pointer(b_Q14_ptr), unsafe.Sizeof(int16(0))*uintptr(LTP_ORDER)))
-		WLTP_ptr = (*int32)(unsafe.Add(unsafe.Pointer(WLTP_ptr), unsafe.Sizeof(int32(0))*uintptr(LTP_ORDER*LTP_ORDER)))
+		WLTP_ptr += LTP_ORDER * LTP_ORDER
 	}
 	maxRshifts = 0
 	for k = 0; k < NB_SUBFR; k++ {
@@ -147,18 +144,7 @@ func SKP_Silk_find_LTP_FIX(b_Q14 [20]int16, WLTP [100]int32, LTPredCodGain_Q7 *i
 		} else {
 			temp32 = SKP_LSHIFT_SAT32(w[k], corr_rshifts[k]-2)
 		}
-		g_Q26 = (SKP_FIX_CONST(0.1, 26) / ((SKP_FIX_CONST(0.1, 26) >> 10) + temp32)) * SKP_LSHIFT_SAT32(func() int32 {
-			if ((m_Q12 - ((d_Q14[k]) >> 2)) & math.MinInt32) == 0 {
-				if (m_Q12 & (((d_Q14[k]) >> 2) ^ math.MinInt32) & math.MinInt32) != 0 {
-					return math.MinInt32
-				}
-				return m_Q12 - ((d_Q14[k]) >> 2)
-			}
-			if ((m_Q12 ^ math.MinInt32) & ((d_Q14[k]) >> 2) & math.MinInt32) != 0 {
-				return SKP_int32_MAX
-			}
-			return m_Q12 - ((d_Q14[k]) >> 2)
-		}(), 4)
+		g_Q26 = (SKP_FIX_CONST(0.1, 26) / ((SKP_FIX_CONST(0.1, 26) >> 10) + temp32)) * SKP_LSHIFT_SAT32(SKP_SUB_SAT32(m_Q12, (d_Q14[k])>>2), 4)
 		temp32 = 0
 		for i = 0; i < LTP_ORDER; i++ {
 			delta_b_Q14[i] = int32(SKP_max_16(*(*int16)(unsafe.Add(unsafe.Pointer(b_Q14_ptr), unsafe.Sizeof(int16(0))*uintptr(i))), 1638))
