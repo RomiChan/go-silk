@@ -2,6 +2,8 @@ package silk
 
 import "math"
 
+// Reviewed by wdvxdr1123 2022-01-03
+
 // #define SKP_enc_map(a)                ((a) > 0 ? 1 : 0)
 // #define SKP_dec_map(a)                ((a) > 0 ? 1 : -1)
 // shifting avoids if-statement
@@ -11,7 +13,15 @@ import "math"
 func SKP_enc_map(a int32) int32 { return (a >> 15) + 1 }
 func SKP_dec_map(a int32) int32 { return (a << 1) - 1 }
 
-func SKP_Silk_encode_signs(sRC *SKP_Silk_range_coder_state, q []int8, length int32, sigtype int32, QuantOffsetType int32, RateLevelIndex int32) {
+// SKP_Silk_encode_signs Encodes signs of excitation
+func SKP_Silk_encode_signs(
+	sRC *SKP_Silk_range_coder_state, // I/O  Range coder state
+	q []int8, // I    Pulse signal
+	length int32, // I    Length of input
+	sigtype int32, // I    Signal type
+	QuantOffsetType int32, // I    Quantization offset type
+	RateLevelIndex int32, // I    Rate level index
+) {
 	i := SKP_SMULBB(N_RATE_LEVELS-1, (sigtype<<1)+QuantOffsetType) + RateLevelIndex
 	cdf := [3]uint16{0, SKP_Silk_sign_CDF[i], math.MaxUint16}
 
@@ -24,7 +34,15 @@ func SKP_Silk_encode_signs(sRC *SKP_Silk_range_coder_state, q []int8, length int
 	}
 }
 
-func SKP_Silk_decode_signs(sRC *SKP_Silk_range_coder_state, q []int32, length int32, sigtype int32, QuantOffsetType int32, RateLevelIndex int32) {
+// SKP_Silk_decode_signs Decodes signs of excitation
+func SKP_Silk_decode_signs(
+	sRC *SKP_Silk_range_coder_state, // I/O  Range coder state
+	q []int32, // I/O  pulse signal
+	length int32, // I    length of output
+	sigtype int32, // I    Signal type
+	QuantOffsetType int32, // I    Quantization offset type
+	RateLevelIndex int32, // I    Rate Level Index
+) {
 	i := SKP_SMULBB(N_RATE_LEVELS-1, (sigtype<<1)+QuantOffsetType) + RateLevelIndex
 	cdf := [3]uint16{0, SKP_Silk_sign_CDF[i], math.MaxUint16}
 
