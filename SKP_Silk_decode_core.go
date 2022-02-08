@@ -11,7 +11,7 @@ func SKP_Silk_decode_core(psDec *SKP_Silk_decoder_state, psDecCtrl *SKP_Silk_dec
 		sLTP_buf_idx            int32
 		NLSF_interpolation_flag int32
 		sigtype                 int32
-		A_Q12                   *int16
+		A_Q12                   []int16
 		B_Q14                   []int16
 		pxq                     []int16
 	)
@@ -46,14 +46,14 @@ func SKP_Silk_decode_core(psDec *SKP_Silk_decoder_state, psDecCtrl *SKP_Silk_dec
 		psDec.Exc_Q10[i] = (psDec.Exc_Q10[i] ^ dither) - dither
 		rand_seed += q[i]
 	}
-	pexc_Q10 = ([]int32)(psDec.Exc_Q10[:])
-	pres_Q10 = ([]int32)(psDec.Res_Q10[:])
-	pxq = ([]int16)(&psDec.OutBuf[psDec.Frame_length])
+	pexc_Q10 = psDec.Exc_Q10[:]
+	pres_Q10 = psDec.Res_Q10[:]
+	pxq = psDec.OutBuf[psDec.Frame_length:]
 	sLTP_buf_idx = psDec.Frame_length
 	for k = 0; k < NB_SUBFR; k++ {
-		A_Q12 = &psDecCtrl.PredCoef_Q12[k>>1][0]
-		memcpy(unsafe.Pointer(&A_Q12_tmp[0]), unsafe.Pointer(A_Q12), size_t(uintptr(psDec.LPC_order)*unsafe.Sizeof(int16(0))))
-		B_Q14 = ([]int16)(&psDecCtrl.LTPCoef_Q14[k*LTP_ORDER])
+		A_Q12 = psDecCtrl.PredCoef_Q12[k>>1][:]
+		memcpy(unsafe.Pointer(&A_Q12_tmp[0]), unsafe.Pointer(&A_Q12[0]), uintptr(psDec.LPC_order)*unsafe.Sizeof(int16(0)))
+		B_Q14 = psDecCtrl.LTPCoef_Q14[k*LTP_ORDER:]
 		Gain_Q16 = psDecCtrl.Gains_Q16[k]
 		sigtype = psDecCtrl.Sigtype
 		inv_gain_Q16 = SKP_INVERSE32_varQ(func() int32 {
@@ -72,7 +72,7 @@ func SKP_Silk_decode_core(psDec *SKP_Silk_decoder_state, psDecCtrl *SKP_Silk_dec
 			gain_adj_Q16 = SKP_DIV32_varQ(inv_gain_Q16, psDec.Prev_inv_gain_Q16, 16)
 		}
 		if psDec.LossCnt != 0 && psDec.Prev_sigtype == SIG_TYPE_VOICED && psDecCtrl.Sigtype == SIG_TYPE_UNVOICED && k < (NB_SUBFR>>1) {
-			memset(unsafe.Pointer(&B_Q14[0]), 0, size_t(LTP_ORDER*unsafe.Sizeof(int16(0))))
+			memset(unsafe.Pointer(&B_Q14[0]), 0, LTP_ORDER*unsafe.Sizeof(int16(0)))
 			B_Q14[LTP_ORDER/2] = 1 << 12
 			sigtype = SIG_TYPE_VOICED
 			psDecCtrl.PitchL[k] = psDec.LagPrev
@@ -83,8 +83,8 @@ func SKP_Silk_decode_core(psDec *SKP_Silk_decoder_state, psDecCtrl *SKP_Silk_dec
 				start_idx = psDec.Frame_length - lag - psDec.LPC_order - LTP_ORDER/2
 				SKP_assert(start_idx >= 0)
 				SKP_assert(start_idx <= psDec.Frame_length-psDec.LPC_order)
-				memset(unsafe.Pointer(&FiltState[0]), 0, size_t(uintptr(psDec.LPC_order)*unsafe.Sizeof(int32(0))))
-				SKP_Silk_MA_Prediction(([]int16)(&psDec.OutBuf[start_idx+k*(psDec.Frame_length>>2)]), ([]int16)(A_Q12), FiltState[:], ([]int16)(&sLTP[start_idx]), psDec.Frame_length-start_idx, psDec.LPC_order)
+				memset(unsafe.Pointer(&FiltState[0]), 0, uintptr(psDec.LPC_order)*unsafe.Sizeof(int32(0)))
+				SKP_Silk_MA_Prediction(psDec.OutBuf[start_idx+k*(psDec.Frame_length>>2):], ([]int16)(A_Q12), FiltState[:], sLTP[start_idx:], psDec.Frame_length-start_idx, psDec.LPC_order)
 				inv_gain_Q32 = inv_gain_Q16 << 16
 				if k == 0 {
 					inv_gain_Q32 = SKP_SMULWB(inv_gain_Q32, psDecCtrl.LTP_scale_Q14) << 2
@@ -106,14 +106,14 @@ func SKP_Silk_decode_core(psDec *SKP_Silk_decoder_state, psDecCtrl *SKP_Silk_dec
 		SKP_assert(inv_gain_Q16 != 0)
 		psDec.Prev_inv_gain_Q16 = inv_gain_Q16
 		if sigtype == SIG_TYPE_VOICED {
-			pred_lag_ptr = ([]int32)(&psDec.SLTP_Q16[sLTP_buf_idx-lag+LTP_ORDER/2])
+			pred_lag_ptr = psDec.SLTP_Q16[sLTP_buf_idx-lag+LTP_ORDER/2:]
 			for i = 0; i < psDec.Subfr_length; i++ {
 				LTP_pred_Q14 = SKP_SMULWB(pred_lag_ptr[0], int32(B_Q14[0]))
 				LTP_pred_Q14 = SKP_SMLAWB(LTP_pred_Q14, pred_lag_ptr[-1], int32(B_Q14[1]))
 				LTP_pred_Q14 = SKP_SMLAWB(LTP_pred_Q14, pred_lag_ptr[-2], int32(B_Q14[2]))
 				LTP_pred_Q14 = SKP_SMLAWB(LTP_pred_Q14, pred_lag_ptr[-3], int32(B_Q14[3]))
 				LTP_pred_Q14 = SKP_SMLAWB(LTP_pred_Q14, pred_lag_ptr[-4], int32(B_Q14[4]))
-				pred_lag_ptr++
+				pred_lag_ptr = pred_lag_ptr[1:]
 				pres_Q10[i] = (pexc_Q10[i]) + SKP_RSHIFT_ROUND(LTP_pred_Q14, 4)
 				psDec.SLTP_Q16[sLTP_buf_idx] = (pres_Q10[i]) << 6
 				sLTP_buf_idx++

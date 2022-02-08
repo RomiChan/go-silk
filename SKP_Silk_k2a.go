@@ -1,5 +1,7 @@
 package silk
 
+// reviewed by wdvxdr1123 2022-02-08
+
 func SKP_Silk_k2a(A_Q24 []int32, rc_Q15 []int16, order int32) {
 	var Atmp [16]int32
 	for k := 0; k < int(order); k++ {
